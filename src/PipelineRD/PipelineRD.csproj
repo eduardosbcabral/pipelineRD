@@ -18,4 +18,8 @@
     <PackageReference Include="WebApi.Models" Version="1.1.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\..\Documents\codigos\github\diagrambuilder\DiagramBuilder\DiagramBuilder.csproj" />
+  </ItemGroup>
+
 </Project>

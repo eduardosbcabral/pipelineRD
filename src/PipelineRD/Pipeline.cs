@@ -21,20 +21,20 @@ namespace PipelineRD
     {
         public TContext Context { get; private set; }
         public string CurrentRequestStepIdentifier { get; private set; }
-        public string Identifier => $"Pipeline<{typeof(TContext).Name}>";
+        public virtual string Identifier => $"Pipeline<{typeof(TContext).Name}>";
         public IReadOnlyCollection<IRequestStep<TContext>> Steps => _requestSteps;
 
-        private readonly IServiceProvider _serviceProvider;
-        private readonly ICacheProvider _cacheProvider;
-        private IValidator _validator;
-        private readonly string _requestKey;
-        private bool _useReuseRequisitionHash;
-        private bool _finallyStepIsSet = false;
-        private readonly Queue<IRequestStep<TContext>> _requestSteps;
-        private readonly Stack<IRollbackRequestStep<TContext>> _rollbacks;
+        protected readonly IServiceProvider _serviceProvider;
+        protected readonly ICacheProvider _cacheProvider;
+        protected IValidator _validator;
+        protected readonly string _requestKey;
+        protected bool _useReuseRequisitionHash;
+        protected bool _finallyStepIsSet = false;
+        protected readonly Queue<IRequestStep<TContext>> _requestSteps;
+        protected readonly Stack<IRollbackRequestStep<TContext>> _rollbacks;
 
         #region Constructors
-        protected Pipeline()
+        private Pipeline()
         {
             _useReuseRequisitionHash = true;
             _rollbacks = new Stack<IRollbackRequestStep<TContext>>();
@@ -65,7 +65,7 @@ namespace PipelineRD
         #endregion
 
         #region AddNext
-        public IPipeline<TContext> AddNext<TRequestStep>() where TRequestStep : IRequestStep<TContext>
+        public virtual IPipeline<TContext> AddNext<TRequestStep>() where TRequestStep : IRequestStep<TContext>
         {
             if (_finallyStepIsSet)
             {
@@ -89,13 +89,13 @@ namespace PipelineRD
         #endregion
 
         #region AddValidator
-        public IPipeline<TContext> AddValidator<TRequest>(IValidator<TRequest> validator) where TRequest : IPipelineRequest
+        public virtual IPipeline<TContext> AddValidator<TRequest>(IValidator<TRequest> validator) where TRequest : IPipelineRequest
         {
             _validator = validator;
             return this;
         }
 
-        public IPipeline<TContext> AddValidator<TRequest>() where TRequest : IPipelineRequest
+        public virtual IPipeline<TContext> AddValidator<TRequest>() where TRequest : IPipelineRequest
         {
             var validator = _serviceProvider.GetService<IValidator<TRequest>>();
             return AddValidator(validator);
@@ -191,10 +191,10 @@ namespace PipelineRD
         #endregion
 
         #region Execute
-        public RequestStepResult Execute<TRequest>(TRequest request) where TRequest : IPipelineRequest
+        public virtual RequestStepResult Execute<TRequest>(TRequest request) where TRequest : IPipelineRequest
             => Execute(request, string.Empty);
 
-        public RequestStepResult Execute<TRequest>(TRequest request, string idempotencyKey) where TRequest : IPipelineRequest
+        public virtual RequestStepResult Execute<TRequest>(TRequest request, string idempotencyKey) where TRequest : IPipelineRequest
         {
             var headStep = HeadStep();
             if (headStep == null)
@@ -299,7 +299,7 @@ namespace PipelineRD
         }
         #endregion
 
-        #region Private Methods
+        #region Protected Methods
         private RequestStepResult ExecutePipeline(string firstStepIdentifier)
         {
             RequestStepResult pipelineResult = null;
@@ -352,8 +352,8 @@ namespace PipelineRD
             return result;
         }
 
-        private IRequestStep<TContext> LastStep() => _requestSteps.LastOrDefault();
-        private IRequestStep<TContext> HeadStep() => _requestSteps.FirstOrDefault();
+        protected IRequestStep<TContext> LastStep() => _requestSteps.LastOrDefault();
+        protected IRequestStep<TContext> HeadStep() => _requestSteps.FirstOrDefault();
         private IRequestStep<TContext> DequeueCurrentStep()
             => _requestSteps.Dequeue();
 

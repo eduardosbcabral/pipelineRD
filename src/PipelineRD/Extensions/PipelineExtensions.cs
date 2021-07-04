@@ -5,6 +5,8 @@ using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyModel;
 
+using PipelineRD.Diagram;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -46,6 +48,16 @@ namespace PipelineRD.Extensions
             //documentation.Compile();
 
             //ExecutePipelineStarting(services, types, typeof(PipelineStarting<>));
+        }
+
+        public static void SetupPipelineRDiagrams(this IServiceCollection services)
+        {
+            services.AddSingleton(new DocumentationBuilder());
+            InjectPipelineDiagrams(services);
+            var provider = services.BuildServiceProvider();
+
+            var documentation = provider.GetService<DocumentationBuilder>();
+            documentation.Compile();
         }
 
         public static void SetupPipelineRCacheInMemory(this IServiceCollection services, CacheSettings cacheSettings)
@@ -135,6 +147,11 @@ namespace PipelineRD.Extensions
             services.AddTransient(typeof(IPipeline<>), typeof(Pipeline<>));
         }
 
+        private static void InjectPipelineDiagrams(IServiceCollection services)
+        {
+            services.AddTransient(typeof(IPipelineDiagram<>), typeof(PipelineDiagram<>));
+        }
+
         private static void InjectPipelineInitializers(IServiceCollection services)
         {
             services.AddScoped(typeof(IPipelineInitializer<>), typeof(PipelineInitializer<>));
@@ -153,6 +170,51 @@ namespace PipelineRD.Extensions
             foreach (var validator in validators)
             {
                 services.AddSingleton(validator.InterfaceType, validator.ValidatorType);
+            }
+        }
+
+        /// <summary>
+        /// Pega todos PipelineBuilder e seus métodos para criar os diagramas
+        /// </summary>
+        /// <param name="types"></param>
+        private static void LoadDiagrams(IEnumerable<TypeInfo> types, IServiceProvider serviceProvider)
+        {
+            var searchingCondition = new[] { "IPipelineDiagram" };
+
+            var pipes = types
+                .Where(a => a.IsClass &&
+                    !searchingCondition.Any(exclude => a.Name.Contains(exclude)) &&
+                    a.ImplementedInterfaces.Any(i =>
+                    searchingCondition.Any(include => i.Name.Contains(include))));
+
+            foreach (var pipe in pipes)
+            {
+                var interfaces = pipe.GetInterfaces()
+                                .Where(a => !searchingCondition.Any(e => a.Name.Contains(e)));
+
+                foreach (var @interface in interfaces)
+                {
+                    var inst = serviceProvider.GetService(@interface);
+                    var methods = inst.GetType().GetMethods();
+
+                    foreach (var method in methods.Where(m => m.ReturnType.Name.Contains("RequestStepResult")))
+                    {
+                        var parameter = method.GetParameters().FirstOrDefault();
+
+                        //AutoFaker.Configure(b =>
+                        //{
+                        //    b.WithRepeatCount(1);
+                        //    b.WithOverride(new StringGeneratorOverride());
+                        //});
+
+                        var instance = Activator.CreateInstance(parameter.ParameterType, null);
+
+                        //var rr = parameter.ParameterType.GetClassStructure(new SnakeCaseNamingStrategy());
+                        method.Invoke(inst, new object[] { instance });
+
+                        //DrawDiagram.AddRequest(result);
+                    }
+                }
             }
         }
     }
