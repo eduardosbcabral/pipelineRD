@@ -5,7 +5,7 @@ using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyModel;
 
-using PipelineRD.Diagram;
+using PipelineRD.Diagrams;
 
 using System;
 using System.Collections.Generic;
@@ -34,30 +34,32 @@ namespace PipelineRD.Extensions
             InjectSteps(services, types);
             InjectPipelineBuilders(services, types);
             InjectPipelines(services);
-            InjectPipelineInitializers(services);
+            //InjectPipelineInitializers(services);
             InjectPipelineRequestValidators(services, types);
-
-            //Generate Docs
-            //services.AddSingleton(p => new DocumentationBuilder());
-            //ExecutePipelineStarting(services, types, typeof(PipelineStartingDiagram<>));
-            //ServiceProvider = services.BuildServiceProvider();
-
-            //LoadingDiagrams(types);
-
-            //var documentation = ServiceProvider.GetService<DocumentationBuilder>();
-            //documentation.Compile();
-
-            //ExecutePipelineStarting(services, types, typeof(PipelineStarting<>));
         }
 
-        public static void SetupPipelineRDiagrams(this IServiceCollection services)
+        public static void GeneratePipelineDiagrams(this IServiceCollection services)
         {
+            if (services == null) throw new ArgumentNullException(nameof(services));
+
+            var assemblies = GetAssemblies();
+
+            var types = assemblies
+                .SelectMany(a => a.GetTypes())
+                .Where(x => x != typeof(CompilerGeneratedAttribute))
+                .Select(a => a.GetTypeInfo());
+
             services.AddSingleton(new DocumentationBuilder());
-            InjectPipelineDiagrams(services);
+            services.AddScoped(typeof(IPipelineInitializer<>), typeof(PipelineInitializerDiagram<>));
+
+            //            ExecutePipelineInitializers(services, types, typeof(IPipelineDiagram<>));
             var provider = services.BuildServiceProvider();
+            LoadDiagrams(types, provider);
 
             var documentation = provider.GetService<DocumentationBuilder>();
             documentation.Compile();
+
+            ExecutePipelineInitializers(services, types, typeof(IPipelineDiagram<>), false);
         }
 
         public static void SetupPipelineRCacheInMemory(this IServiceCollection services, CacheSettings cacheSettings)
@@ -147,11 +149,6 @@ namespace PipelineRD.Extensions
             services.AddTransient(typeof(IPipeline<>), typeof(Pipeline<>));
         }
 
-        private static void InjectPipelineDiagrams(IServiceCollection services)
-        {
-            services.AddTransient(typeof(IPipelineDiagram<>), typeof(PipelineDiagram<>));
-        }
-
         private static void InjectPipelineInitializers(IServiceCollection services)
         {
             services.AddScoped(typeof(IPipelineInitializer<>), typeof(PipelineInitializer<>));
@@ -179,7 +176,7 @@ namespace PipelineRD.Extensions
         /// <param name="types"></param>
         private static void LoadDiagrams(IEnumerable<TypeInfo> types, IServiceProvider serviceProvider)
         {
-            var searchingCondition = new[] { "IPipelineDiagram" };
+            var searchingCondition = new[] { "IPipelineBuilder" };
 
             var pipes = types
                 .Where(a => a.IsClass &&
@@ -215,6 +212,28 @@ namespace PipelineRD.Extensions
                         //DrawDiagram.AddRequest(result);
                     }
                 }
+            }
+        }
+
+        private static void ExecutePipelineInitializers(IServiceCollection services, IEnumerable<TypeInfo> types, Type basePipelineInitializer, bool isInsert = true)
+        {
+            Type baseType = typeof(IPipelineInitializer<>);
+
+            var contexts = types
+                                .Where(a => a.IsClass && a.BaseType == typeof(BaseContext));
+
+            foreach (var context in contexts)
+            {
+                Type[] typeArgs = { context.AsType() };
+                var typeWithGeneric = baseType.MakeGenericType(typeArgs);
+
+                Type impleBaseType = basePipelineInitializer;
+                var impleTypeWithGeneric = impleBaseType.MakeGenericType(typeArgs);
+
+                if (isInsert)
+                    services.AddScoped(typeWithGeneric, impleTypeWithGeneric);
+                else
+                    services.Remove(new ServiceDescriptor(typeWithGeneric, impleTypeWithGeneric, ServiceLifetime.Scoped));
             }
         }
     }

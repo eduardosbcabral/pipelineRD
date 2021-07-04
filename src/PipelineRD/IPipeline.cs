@@ -4,6 +4,7 @@ using Polly;
 
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 
 namespace PipelineRD
 {
@@ -40,7 +41,7 @@ namespace PipelineRD
         #endregion
 
         #region AddCondition
-        IPipeline<TContext> When(Func<TContext, bool> func);
+        IPipeline<TContext> When(Expression<Func<TContext, bool>> condition);
         IPipeline<TContext> When<TCondition>();
         #endregion
 

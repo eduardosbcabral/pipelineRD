@@ -5,7 +5,7 @@ namespace PipelineRD.Tests.Conditions
 {
     public class SampleCondition : ISampleCondition
     {
-        public Func<ContextSample, bool> When()
+        public Expression<Func<ContextSample, bool>> When()
             => x => x.ValidSecond == true;
     }
 

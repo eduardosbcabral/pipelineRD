@@ -11,7 +11,7 @@ namespace PipelineRD.Tests
         public void ConfigureServices(IServiceCollection services)
         {
             services.SetupPipelineR();
-            services.SetupPipelineRDiagrams();
+            services.GeneratePipelineDiagrams();
 
             // Injecting service for the interface IDistributedCache
             services.AddDistributedMemoryCache();

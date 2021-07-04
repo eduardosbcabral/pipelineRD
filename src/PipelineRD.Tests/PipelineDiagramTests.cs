@@ -1,11 +1,11 @@
-﻿using PipelineRD.Tests.Request;
-using PipelineRD.Tests.Steps;
+﻿using PipelineRD.Tests.Steps;
 
 using Microsoft.Extensions.DependencyInjection;
 
 using System;
 
 using Xunit;
+using PipelineRD.Diagrams;
 
 namespace PipelineRD.Tests
 {

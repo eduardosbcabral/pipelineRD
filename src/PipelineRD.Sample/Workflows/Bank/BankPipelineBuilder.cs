@@ -24,6 +24,7 @@ namespace PipelineRD.Sample.Workflows.Bank
                     .When(b => b.Id == "bla")
                 .AddNext<ISearchAccountStep>()
                 .AddNext<ICreateAccountStep>()
+                .AddNext<IFinishAccountStep>()
                 .Execute(model);
         }
 
@@ -34,6 +35,8 @@ namespace PipelineRD.Sample.Workflows.Bank
                 .AddNext<ISearchAccountStep>()
                 .AddNext<ISearchAccountStep>()
                 .AddNext<IDepositAccountStep>()
+                    .When(b => b.Id == "test")
+                .AddNext<IFinishAccountStep>()
                 .Execute(model);
         }
     }

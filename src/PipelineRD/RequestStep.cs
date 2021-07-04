@@ -1,6 +1,7 @@
 ﻿using Polly;
 
 using System;
+using System.Linq.Expressions;
 using System.Net;
 
 namespace PipelineRD
@@ -9,7 +10,7 @@ namespace PipelineRD
     {
         public Policy<RequestStepResult> Policy { get; set; }
         public TContext Context => _pipeline?.Context;
-        public Func<TContext, bool> ConditionToExecute { get; set; }
+        public Expression<Func<TContext, bool>> ConditionToExecute { get; set; }
         public int? RollbackIndex { get; private set; }
 
         private IPipeline<TContext> _pipeline;

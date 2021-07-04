@@ -1,4 +1,6 @@
-﻿using System;
+﻿using PipelineRD.Diagrams;
+
+using System;
 
 namespace PipelineRD
 {
@@ -13,15 +15,22 @@ namespace PipelineRD
 
         public IPipeline<TContext> Initialize() => new Pipeline<TContext>(_serviceProvider);
         public IPipeline<TContext> Initialize(string requestKey) => new Pipeline<TContext>(_serviceProvider, requestKey);
-
-        //public IPipeline<TContext> Start(string diagramTitle, string diagramDescription) => new Pipeline<TContext>();
     }
 
-    //public class PipelineStartingDiagram<TContext> : IPipelineInitializer<TContext> where TContext : BaseContext
-    //{
-    //    public IPipeline<TContext> Start() => new PipelineDiagram<TContext>();
-    //    //public IPipeline<TContext> Start(string diagramTitle, string diagramDescription) => new PipelineDiagram<TContext>(diagramTitle, diagramDescription);
-    //}
+    internal class PipelineInitializerDiagram<TContext> : IPipelineInitializer<TContext> where TContext : BaseContext
+    {
+        private readonly IServiceProvider _serviceProvider;
+        private readonly DocumentationBuilder _documentationBuilder;
+
+        public PipelineInitializerDiagram(IServiceProvider serviceProvider, DocumentationBuilder documentationBuilder)
+        {
+            _serviceProvider = serviceProvider;
+            _documentationBuilder = documentationBuilder;
+
+        }
+        public IPipeline<TContext> Initialize() => new PipelineDiagram<TContext>(_serviceProvider, _documentationBuilder);
+        public IPipeline<TContext> Initialize(string requestKey) => new PipelineDiagram<TContext>(_serviceProvider, _documentationBuilder);
+    }
 
     public interface IPipelineInitializer<TContext> where TContext : BaseContext
     {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net;
 
 using FluentValidation;
@@ -65,7 +66,7 @@ namespace PipelineRD
         #endregion
 
         #region AddNext
-        public virtual IPipeline<TContext> AddNext<TRequestStep>() where TRequestStep : IRequestStep<TContext>
+        public IPipeline<TContext> AddNext<TRequestStep>() where TRequestStep : IRequestStep<TContext>
         {
             if (_finallyStepIsSet)
             {
@@ -116,7 +117,7 @@ namespace PipelineRD
         #endregion
 
         #region When
-        public IPipeline<TContext> When(Func<TContext, bool> condition)
+        public IPipeline<TContext> When(Expression<Func<TContext, bool>> condition)
         {
             var lastStep = LastStep();
             if (condition != null && lastStep != null)
@@ -289,7 +290,7 @@ namespace PipelineRD
             var currentStep = DequeueCurrentStep();
             SetCurrentRequestStepIdentifier(currentStep);
 
-            if (currentStep.ConditionToExecute is null || currentStep.ConditionToExecute.IsSatisfied(currentStep.Context))
+            if (currentStep.ConditionToExecute is null || currentStep.ConditionToExecute.Compile().Invoke(currentStep.Context))
             {
                 var result = currentStep.Execute();
                 return result;
