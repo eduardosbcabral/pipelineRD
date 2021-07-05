@@ -4,6 +4,7 @@
     {
         Next,
         When,
-        Finnaly
+        Finnaly,
+        Rollback
     }
 }

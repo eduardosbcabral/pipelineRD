@@ -22,8 +22,10 @@ namespace PipelineRD.Sample.Workflows.Bank
                 .Initialize(requestKey)
                 .AddNext<ISearchAccountStep>()
                     .When(b => b.Id == "bla")
-                .AddNext<ISearchAccountStep>()
+                .AddNext<IDepositAccountStep>()
+                    .AddRollback<IDepositAccountRollbackStep>()
                 .AddNext<ICreateAccountStep>()
+                    .AddRollback<ICreateAccountRollbackStep>()
                 .AddNext<IFinishAccountStep>()
                 .Execute(model);
         }

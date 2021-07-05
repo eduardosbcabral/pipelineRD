@@ -121,14 +121,22 @@ namespace PipelineRD.Diagrams
             return this;
         }
 
-        public IPipeline<TContext> AddRollback(IRollbackRequestStep<TContext> rollbackHandler)
+        public IPipeline<TContext> AddRollback(IRollbackRequestStep<TContext> rollbackStep)
         {
-            throw new NotImplementedException();
+            if (rollbackStep == null)
+            {
+                throw new NullReferenceException("[PipelineDiagram] Request step not found.");
+            }
+
+            var node = new Node(rollbackStep.GetType().Name);
+            AddNodeR(node, ENodeType.Rollback);
+            return this;
         }
 
         public IPipeline<TContext> AddRollback<TRollbackRequestStep>() where TRollbackRequestStep : IRollbackRequestStep<TContext>
         {
-            throw new NotImplementedException();
+            var rollbackStep = (IRollbackRequestStep<TContext>)_serviceProvider.GetService<TRollbackRequestStep>();
+            return AddRollback(rollbackStep);
         }
 
         public IPipeline<TContext> AddFinally<TRequestStep>() where TRequestStep : IRequestStep<TContext>
@@ -167,25 +175,50 @@ namespace PipelineRD.Diagrams
                 var node = nodeR.Node;
                 var nextNode = nextNodeR.Node;
 
-                if (nodeR.Type == ENodeType.When)
+                if(nextNodeR.Type == ENodeType.Rollback)
                 {
                     _flowchart.Connect(node)
-                        .With(nextNode, "Sim", NodeLinkType.DottedLineArrow);
+                      .With(nextNode, NodeLinkType.LineArrow);
+                }
+                else if (nodeR.Type == ENodeType.When)
+                {
+                    _flowchart.Connect(node)
+                        .With(nextNode, "Yes", NodeLinkType.DottedLineArrow);
 
                     if (HasNextNodeR(nextNodeR))
                     {
                         var next = NextNodeR(nextNodeR);
-                        _flowchart.With(next.Node, "Não", NodeLinkType.DottedLineArrow);
+                        _flowchart.With(next.Node, "No", NodeLinkType.DottedLineArrow);
                         _flowchart.Connect(nextNode)
-                                    .With(next.Node);
+                            .With(next.Node, NodeLinkType.ThickLineArrow);
+                    }
+                }
+                else if(nodeR.Type == ENodeType.Rollback)
+                {
+                    //var previousRollbackNodeR = PreviousNodeRByType(nodeR, ENodeType.Rollback);
+                    //if(previousRollbackNodeR != null)
+                    //{
+                    //    _flowchart.Connect(nodeR.Node)
+                    //        .With(previousRollbackNodeR.Node, NodeLinkType.ThickLineArrow);
+                    //}
+
+                    var previousNode = PreviousNodeR(nodeR);
+                    if (previousNode != null)
+                    {
+                        _flowchart.Connect(previousNode.Node)
+                            .With(nextNode, NodeLinkType.ThickLineArrow);
                     }
                 }
                 else
                 {
-                    if(PreviousNodeR(nodeR)?.Type != ENodeType.When)
+                    var previousNode = PreviousNodeR(nodeR);
+                    if(previousNode != null)
                     {
-                        _flowchart.Connect(node)
-                                    .With(nextNode);
+                        if(previousNode.Type != ENodeType.When)
+                        {
+                            _flowchart.Connect(node)
+                                .With(nextNode);
+                        }
                     }
                 }
             }
@@ -214,6 +247,19 @@ namespace PipelineRD.Diagrams
 
                 if (previousNodeIndex < _nodes.Count())
                     return _nodes[previousNodeIndex];
+            }
+
+            return null;
+        }
+
+        private NodeR PreviousNodeRByType(NodeR currentNode, ENodeType type)
+        {
+            var index = _nodes.IndexOf(currentNode);
+
+            if (index > 0)
+            {
+                var previousNodes = _nodes.Take(index)?.Where(x => x.Type == type);
+                return previousNodes?.LastOrDefault();
             }
 
             return null;

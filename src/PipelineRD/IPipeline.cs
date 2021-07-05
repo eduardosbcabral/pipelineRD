@@ -46,7 +46,7 @@ namespace PipelineRD
         #endregion
 
         #region AddRollback
-        IPipeline<TContext> AddRollback(IRollbackRequestStep<TContext> rollbackHandler);
+        IPipeline<TContext> AddRollback(IRollbackRequestStep<TContext> rollbackStep);
         IPipeline<TContext> AddRollback<TRollbackRequestStep>() where TRollbackRequestStep : IRollbackRequestStep<TContext>;
         #endregion
 
