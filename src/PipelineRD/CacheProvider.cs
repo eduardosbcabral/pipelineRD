@@ -2,6 +2,9 @@
 
 using Microsoft.Extensions.Caching.Distributed;
 using Newtonsoft.Json;
+
+using PipelineRD.Settings;
+
 using Polly;
 using System;
 using System.IO;
@@ -12,14 +15,14 @@ namespace PipelineRD
 {
     public class CacheProvider : ICacheProvider
     {
-        private readonly CacheSettings _cacheSettings;
+        private readonly ICacheSettings _cacheSettings;
         private readonly IDistributedCache _distributedCache;
         private JsonSerializer _serializer;
 
-        public CacheProvider(CacheSettings cacheSettings, IDistributedCache distributedCache)
+        public CacheProvider(ICacheSettings cacheSettings, IDistributedCache distributedCache)
         {
-            _cacheSettings = cacheSettings;
-            _distributedCache = distributedCache;
+            _cacheSettings = cacheSettings ?? throw new ArgumentNullException(nameof(cacheSettings));
+            _distributedCache = distributedCache ?? throw new ArgumentNullException(nameof(distributedCache));
         }
                 
         private JsonSerializer GetSerializer()

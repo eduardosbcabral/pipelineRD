@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 
 using PipelineRD.Extensions;
 using PipelineRD.Sample.Workflows.Bank;
+using PipelineRD.Settings;
 
 namespace PipelineRD.Sample
 {
@@ -21,8 +22,11 @@ namespace PipelineRD.Sample
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.SetupPipelineR();
-            services.SetupPipelineRCacheInMemory(new CacheSettings());
+            services.UsePipelineRD(x =>
+            {
+                x.UseCacheInMemory(new MemoryCacheSettings());
+                x.AddPipelineServices();
+            });
             services.GeneratePipelineDiagrams();
             services.AddControllers();
         }

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyModel;
 
+using PipelineRD.Builders;
 using PipelineRD.Diagrams;
 
 using System;
@@ -19,6 +20,19 @@ namespace PipelineRD.Extensions
 {
     public static class PipelineExtensions
     {
+        public static void UsePipelineRD(this IServiceCollection services, Action<IPipelineRDBuilder> configure)
+        {
+            if (services == null) throw new ArgumentNullException(nameof(services));
+
+            var builder = new PipelineRDBuilder(services);
+            configure(builder);
+            
+            if(!builder.CacheSettingsIsConfigured)
+            {
+                throw new ArgumentNullException("CacheSettings", "Cache settings is not configured. Use the method 'AddCacheSettings' when configuring the PipelineRD.");
+            }
+        }
+
         public static void SetupPipelineR(this IServiceCollection services)
         {
             if (services == null) throw new ArgumentNullException(nameof(services));
@@ -51,6 +65,7 @@ namespace PipelineRD.Extensions
 
             services.AddSingleton(new DocumentationBuilder());
             services.AddScoped(typeof(IPipelineInitializer<>), typeof(PipelineInitializerDiagram<>));
+            services.AddTransient(typeof(IPipelineDiagram<>), typeof(PipelineDiagram<>));
 
             //            ExecutePipelineInitializers(services, types, typeof(IPipelineDiagram<>));
             var provider = services.BuildServiceProvider();
@@ -69,7 +84,7 @@ namespace PipelineRD.Extensions
             services.AddDistributedMemoryCache();
             var provider = services.BuildServiceProvider();
             var distributedCache = provider.GetService<IDistributedCache>();
-            services.AddSingleton<ICacheProvider>(new CacheProvider(cacheSettings, distributedCache));
+            //services.AddSingleton<ICacheProvider>(new CacheProvider(cacheSettings, distributedCache));
         }
 
         public static void SetupPipelineRCacheInRedis(this IServiceCollection services, CacheSettings cacheSettings, RedisCacheOptions redisCacheOptions)
@@ -81,7 +96,7 @@ namespace PipelineRD.Extensions
             });
             var provider = services.BuildServiceProvider();
             var distributedCache = provider.GetService<IDistributedCache>();
-            services.AddSingleton<ICacheProvider>(new CacheProvider(cacheSettings, distributedCache));
+            //services.AddSingleton<ICacheProvider>(new CacheProvider(cacheSettings, distributedCache));
         }
 
         private static IEnumerable<Assembly> GetAssemblies()
@@ -147,11 +162,6 @@ namespace PipelineRD.Extensions
         private static void InjectPipelines(IServiceCollection services)
         {
             services.AddTransient(typeof(IPipeline<>), typeof(Pipeline<>));
-        }
-
-        private static void InjectPipelineInitializers(IServiceCollection services)
-        {
-            services.AddScoped(typeof(IPipelineInitializer<>), typeof(PipelineInitializer<>));
         }
 
         private static void InjectPipelineRequestValidators(IServiceCollection services, IEnumerable<TypeInfo> types)

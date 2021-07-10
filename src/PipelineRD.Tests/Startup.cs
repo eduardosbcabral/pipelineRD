@@ -1,7 +1,9 @@
 ﻿using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 
+using PipelineRD.Diagrams;
 using PipelineRD.Extensions;
+using PipelineRD.Settings;
 using PipelineRD.Tests.Conditions;
 
 namespace PipelineRD.Tests
@@ -10,21 +12,16 @@ namespace PipelineRD.Tests
     {
         public void ConfigureServices(IServiceCollection services)
         {
-            services.SetupPipelineR();
-            services.GeneratePipelineDiagrams();
+            services.UsePipelineRD(x =>
+            {
+                x.UseCacheInMemory(new MemoryCacheSettings());
+                x.AddPipelineServices();
+            });
 
-            // Injecting service for the interface IDistributedCache
-            services.AddDistributedMemoryCache();
+            services.AddTransient(typeof(IPipelineDiagram<>), typeof(PipelineDiagram<>));
 
-            var cacheSettings = new CacheSettings();
+            //services.GeneratePipelineDiagrams();
 
-            services.AddSingleton(cacheSettings);
-
-            var provider = services.BuildServiceProvider();
-
-            var distributedCache = provider.GetService<IDistributedCache>();
-
-            services.AddSingleton<ICacheProvider>(new CacheProvider(cacheSettings, distributedCache));
             services.AddSingleton<ISampleCondition, SampleCondition>();
         }
     }
