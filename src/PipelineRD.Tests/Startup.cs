@@ -15,7 +15,7 @@ namespace PipelineRD.Tests
             services.UsePipelineRD(x =>
             {
                 x.UseCacheInMemory(new MemoryCacheSettings());
-                x.AddPipelineServices();
+                x.AddPipelineServices(x => x.InjectAll());
             });
 
             services.AddTransient(typeof(IPipelineDiagram<>), typeof(PipelineDiagram<>));

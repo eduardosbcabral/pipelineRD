@@ -8,7 +8,7 @@ namespace PipelineRD.Builders
     {
         void UseCacheInMemory(MemoryCacheSettings cacheSettings);
         void UseCacheInRedis(RedisCacheSettings cacheSettings);
-        void AddPipelineServices();
+        void AddPipelineServices(Action<IPipelineServicesBuilder> configure);
         void UseDocumentation(Action<IDocumentationBuilder> configure);
     }
 }

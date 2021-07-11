@@ -28,7 +28,15 @@ namespace PipelineRD.Sample
             services.UsePipelineRD(x =>
             {
                 x.UseCacheInMemory(new MemoryCacheSettings());
-                x.AddPipelineServices();
+                x.AddPipelineServices(x =>
+                {
+                    x.InjectContexts();
+                    x.InjectSteps();
+                    x.InjectPipelines();
+                    x.InjectRequestValidators();
+                    x.InjectPipelineInitializers();
+                    x.InjectPipelineBuilders();
+                });
                 // localhost:{PORT}/docs
                 x.UseDocumentation(x =>
                 {

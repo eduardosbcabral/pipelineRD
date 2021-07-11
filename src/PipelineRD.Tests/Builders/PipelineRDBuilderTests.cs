@@ -60,7 +60,7 @@ namespace PipelineRD.Tests.Builders
             services.UsePipelineRD(x =>
             {
                 x.UseCacheInMemory(new MemoryCacheSettings());
-                x.AddPipelineServices();
+                x.AddPipelineServices(x => x.InjectAll());
             });
            
             var provider = services.BuildServiceProvider();
@@ -89,7 +89,7 @@ namespace PipelineRD.Tests.Builders
             services.UsePipelineRD(x =>
             {
                 x.UseCacheInMemory(new MemoryCacheSettings());
-                x.AddPipelineServices();
+                x.AddPipelineServices(x => x.InjectContexts());
             });
 
             var provider = services.BuildServiceProvider();
@@ -108,7 +108,7 @@ namespace PipelineRD.Tests.Builders
             services.UsePipelineRD(x =>
             {
                 x.UseCacheInMemory(new MemoryCacheSettings());
-                x.AddPipelineServices();
+                x.AddPipelineServices(x => x.InjectSteps());
             });
 
             var provider = services.BuildServiceProvider();
@@ -127,7 +127,7 @@ namespace PipelineRD.Tests.Builders
             services.UsePipelineRD(x =>
             {
                 x.UseCacheInMemory(new MemoryCacheSettings());
-                x.AddPipelineServices();
+                x.AddPipelineServices(x => x.InjectPipelines());
             });
 
             var provider = services.BuildServiceProvider();
@@ -146,7 +146,7 @@ namespace PipelineRD.Tests.Builders
             services.UsePipelineRD(x =>
             {
                 x.UseCacheInMemory(new MemoryCacheSettings());
-                x.AddPipelineServices();
+                x.AddPipelineServices(x => x.InjectRequestValidators());
             });
 
             var provider = services.BuildServiceProvider();
@@ -165,7 +165,7 @@ namespace PipelineRD.Tests.Builders
             services.UsePipelineRD(x =>
             {
                 x.UseCacheInMemory(new MemoryCacheSettings());
-                x.AddPipelineServices();
+                x.AddPipelineServices(x => x.InjectPipelineInitializers());
             });
 
             var provider = services.BuildServiceProvider();
@@ -184,7 +184,7 @@ namespace PipelineRD.Tests.Builders
             services.UsePipelineRD(x =>
             {
                 x.UseCacheInMemory(new MemoryCacheSettings());
-                x.AddPipelineServices();
+                x.AddPipelineServices(x => x.InjectPipelineBuilders());
             });
 
             var provider = services.BuildServiceProvider();
@@ -210,7 +210,7 @@ namespace PipelineRD.Tests.Builders
             services.UsePipelineRD(x =>
             {
                 x.UseCacheInMemory(new MemoryCacheSettings());
-                x.AddPipelineServices();
+                x.AddPipelineServices(x => x.InjectAll());
                 x.UseDocumentation(x =>
                 {
                     x.UsePath(@"C:\Users\Eduardo\Documents\teste");

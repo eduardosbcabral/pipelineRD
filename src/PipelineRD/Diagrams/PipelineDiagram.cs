@@ -222,58 +222,6 @@ namespace PipelineRD.Diagrams
                       .With(nextNode);
                 }
             }
-
-            return;
-            foreach (var nodeR in _nodes)
-            {
-                if (HasNextNodeR(nodeR) == false)
-                    continue;
-
-                var nextNodeR = NextNodeR(nodeR);
-
-                var node = nodeR.Node;
-                var nextNode = nextNodeR.Node;
-
-                if (nextNodeR.Type == ENodeType.Rollback)
-                {
-                    _flowchart.Connect(node)
-                      .With(nextNode, NodeLinkType.LineArrow);
-                }
-                else if (nodeR.Type == ENodeType.When)
-                {
-                    _flowchart.Connect(node)
-                        .With(nextNode, "Yes", NodeLinkType.DottedLineArrow);
-
-                    if (HasNextNodeR(nextNodeR))
-                    {
-                        var next = NextNodeR(nextNodeR);
-                        _flowchart.With(next.Node, "No", NodeLinkType.DottedLineArrow);
-                        _flowchart.Connect(nextNode)
-                            .With(next.Node, NodeLinkType.ThickLineArrow);
-                    }
-                }
-                else if (nodeR.Type == ENodeType.Rollback)
-                {
-                    var previousNode = PreviousNodeR(nodeR);
-                    if (previousNode != null)
-                    {
-                        _flowchart.Connect(previousNode.Node)
-                            .With(nextNode, NodeLinkType.ThickLineArrow);
-                    }
-                }
-                else
-                {
-                    var previousNode = PreviousNodeR(nodeR);
-                    if (previousNode != null)
-                    {
-                        if (previousNode.Type != ENodeType.When)
-                        {
-                            _flowchart.Connect(node)
-                                .With(nextNode);
-                        }
-                    }
-                }
-            }
         }
 
         private bool HasNextNodeR(NodeR currentNode) => NextNodeR(currentNode) != null;
