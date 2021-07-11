@@ -2,6 +2,8 @@
 using PipelineRD.Sample.Workflows.Bank.AccountSteps;
 using PipelineRD.Sample.Workflows.Bank.SharedSteps;
 
+using Polly;
+
 using System;
 
 namespace PipelineRD.Sample.Workflows.Bank
@@ -20,10 +22,12 @@ namespace PipelineRD.Sample.Workflows.Bank
             var requestKey = Guid.NewGuid().ToString();
             return Pipeline
                 .Initialize(requestKey)
+                .EnableRecoveryRequestByHash()
                 .AddNext<ISearchAccountStep>()
                     .When(b => b.Id == "bla")
                 .AddNext<IDepositAccountStep>()
                     .AddRollback<IDepositAccountRollbackStep>()
+                    .WithPolicy(Policy.HandleResult<RequestStepResult>(x => !x.Success).Retry(3))
                 .AddNext<ICreateAccountStep>()
                     .AddRollback<ICreateAccountRollbackStep>()
                 .AddNext<IFinishAccountStep>()

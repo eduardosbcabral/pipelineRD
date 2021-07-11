@@ -42,12 +42,12 @@ namespace PipelineRD.Diagrams
 
         public IPipeline<TContext> EnableRecoveryRequestByHash()
         {
-            throw new NotImplementedException();
+            return this;
         }
 
         public IPipeline<TContext> DisableRecoveryRequestByHash()
         {
-            throw new NotImplementedException();
+            return this;
         }
 
         public RequestStepResult Execute<TRequest>(TRequest request) where TRequest : IPipelineRequest
@@ -69,15 +69,9 @@ namespace PipelineRD.Diagrams
             return null;
         }
 
-        public RequestStepResult ExecuteFromSpecificRequestStep(string requestStepIdentifier)
-        {
-            throw new NotImplementedException();
-        }
+        public RequestStepResult ExecuteFromSpecificRequestStep(string requestStepIdentifier) => null;
 
-        public RequestStepResult ExecuteNextRequestStep()
-        {
-            throw new NotImplementedException();
-        }
+        public RequestStepResult ExecuteNextRequestStep() => null;
 
         public IPipeline<TContext> AddNext<TRequestStep>() where TRequestStep : IRequestStep<TContext>
         {
@@ -94,17 +88,22 @@ namespace PipelineRD.Diagrams
 
         public IPipeline<TContext> AddValidator<TRequest>(IValidator<TRequest> validator) where TRequest : IPipelineRequest
         {
-            throw new NotImplementedException();
+            var node = new Node("Validate request");
+            AddNodeR(node, ENodeType.Next);
+            return this;
         }
 
         public IPipeline<TContext> AddValidator<TRequest>() where TRequest : IPipelineRequest
-        {
-            throw new NotImplementedException();
-        }
+            => AddValidator<TRequest>(null);
 
         public IPipeline<TContext> WithPolicy(Policy<RequestStepResult> policy)
         {
-            throw new NotImplementedException();
+            var currentNode = _nodes.LastOrDefault(x => x.Type == ENodeType.Next);
+            if(currentNode != null)
+            {
+                currentNode.Node.Text += " - With Policy";
+            }
+            return this;
         }
 
         public IPipeline<TContext> When(Expression<Func<TContext, bool>> condition)
@@ -155,7 +154,7 @@ namespace PipelineRD.Diagrams
             throw new NotImplementedException();
         }
 
-        private string ExpressionBody<T>(Expression<Func<T, bool>> exp)
+        private static string ExpressionBody<T>(Expression<Func<T, bool>> exp)
         {
             string expBody = (exp).Body.ToString();
 
@@ -247,19 +246,6 @@ namespace PipelineRD.Diagrams
 
                 if (previousNodeIndex < _nodes.Count())
                     return _nodes[previousNodeIndex];
-            }
-
-            return null;
-        }
-
-        private NodeR PreviousNodeRByType(NodeR currentNode, ENodeType type)
-        {
-            var index = _nodes.IndexOf(currentNode);
-
-            if (index > 0)
-            {
-                var previousNodes = _nodes.Take(index)?.Where(x => x.Type == type);
-                return previousNodes?.LastOrDefault();
             }
 
             return null;

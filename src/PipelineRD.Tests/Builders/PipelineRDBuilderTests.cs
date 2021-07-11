@@ -213,7 +213,7 @@ namespace PipelineRD.Tests.Builders
                 x.AddPipelineServices(x => x.InjectAll());
                 x.UseDocumentation(x =>
                 {
-                    x.UsePath(@"C:\Users\Eduardo\Documents\teste");
+                    x.UsePath(@"C:\dev\docs");
                 });
             });
         }
