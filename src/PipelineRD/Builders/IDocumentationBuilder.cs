@@ -2,7 +2,6 @@
 {
     public interface IDocumentationBuilder
     {
-        void UseStatic(string folder);
         void UsePath(string path);
     }
 }

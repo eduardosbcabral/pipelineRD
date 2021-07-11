@@ -11,7 +11,7 @@ using PipelineRD.Extensions;
 using PipelineRD.Tests.Validators;
 using System.Linq;
 using Polly;
-using Nancy;
+using System.Net;
 
 namespace PipelineRD.Tests
 {

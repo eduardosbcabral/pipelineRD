@@ -23,7 +23,7 @@ namespace PipelineRD.Sample
         public IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
-        public void ConfigureServices(IServiceCollection services)
+        public void ConfigureServices(IServiceCollection services, IWebHostEnvironment env)
         {
             services.UsePipelineRD(x =>
             {
@@ -40,7 +40,8 @@ namespace PipelineRD.Sample
                 // localhost:{PORT}/docs
                 x.UseDocumentation(x =>
                 {
-                    x.UseStatic("wwwroot/docs");
+                    var path = Path.Combine(env.ContentRootPath, "wwwroot", "docs");
+                    x.UsePath(path);
                 });
             });
 

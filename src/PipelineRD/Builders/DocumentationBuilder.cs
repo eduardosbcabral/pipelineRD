@@ -1,8 +1,5 @@
 ﻿using DiagramBuilder.Html;
 
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-
 using PipelineRD.Builders;
 
 using System;
@@ -40,20 +37,6 @@ namespace PipelineRD
             if (isAlreadySet) return;
 
             Build();
-            new HtmlBuilder().BuildDocumentation(path, _diagrams.ToArray());
-            isAlreadySet = true;
-        }
-
-        public void UseStatic(string folder)
-        {
-            if (isAlreadySet) return;
-
-            Build();
-
-            var env = _serviceProvider.GetRequiredService<IWebHostEnvironment>();
-
-            var path = Path.Combine(env.ContentRootPath, folder);
-
             new HtmlBuilder().BuildDocumentation(path, _diagrams.ToArray());
             isAlreadySet = true;
         }
