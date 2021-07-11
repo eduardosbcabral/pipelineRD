@@ -2,11 +2,14 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 
 using PipelineRD.Extensions;
 using PipelineRD.Sample.Workflows.Bank;
 using PipelineRD.Settings;
+
+using System.IO;
 
 namespace PipelineRD.Sample
 {
@@ -26,8 +29,16 @@ namespace PipelineRD.Sample
             {
                 x.UseCacheInMemory(new MemoryCacheSettings());
                 x.AddPipelineServices();
+                // localhost:{PORT}/docs
+                x.UseDocumentation(x =>
+                {
+                    x.UseStatic("wwwroot/docs");
+                });
             });
-            services.GeneratePipelineDiagrams();
+
+
+            services.AddDirectoryBrowser();
+
             services.AddControllers();
         }
 
@@ -38,6 +49,10 @@ namespace PipelineRD.Sample
             {
                 app.UseDeveloperExceptionPage();
             }
+
+            // Need this to see the pipeline docs
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
 
             app.UseRouting();
 

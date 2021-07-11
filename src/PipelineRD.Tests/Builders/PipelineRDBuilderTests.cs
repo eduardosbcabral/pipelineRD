@@ -1,6 +1,5 @@
 ﻿using FluentValidation;
 
-using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.DependencyInjection;
 
 using PipelineRD.Extensions;
@@ -13,7 +12,7 @@ using Xunit;
 
 namespace PipelineRD.Tests.Builders
 {
-    public class IPipelineRDBuilderTests
+    public class PipelineRDBuilderTests
     {
         [Fact]
         public void Should_UsePipelineRD_And_UseCacheInMemory()
@@ -202,6 +201,22 @@ namespace PipelineRD.Tests.Builders
             var services = new ServiceCollection();
             Assert.Throws<ArgumentNullException>(() => services.UsePipelineRD(x => { }));
         }
+
+        [Fact]
+        public void Should_Generate_Documentation()
+        {
+            var services = new ServiceCollection();
+
+            services.UsePipelineRD(x =>
+            {
+                x.UseCacheInMemory(new MemoryCacheSettings());
+                x.AddPipelineServices();
+                x.UseDocumentation(x =>
+                {
+                    x.UsePath(@"C:\Users\Eduardo\Documents\teste");
+                });
+            });
+        }
     }
 
     class PipelineRDTestStep : RequestStep<PipelineRDContextTest>, IPipelineRDTestStep
@@ -214,25 +229,46 @@ namespace PipelineRD.Tests.Builders
         public override void HandleRollback() { }
     }
 
-    interface IPipelineRDTestStep : IRequestStep<PipelineRDContextTest>
-    { }
+    interface IPipelineRDTestStep : IRequestStep<PipelineRDContextTest> { }
 
-    interface IPipelineRDTestRollbackStep : IRollbackRequestStep<PipelineRDContextTest>
-    { }
+    interface IPipelineRDTestRollbackStep : IRollbackRequestStep<PipelineRDContextTest> { }
 
-    class PipelineRDContextTest : BaseContext
-    { }
+    class PipelineRDContextTest : BaseContext { public bool Valid { get; set; } }
 
-    class PipelineRDRequestTest : IPipelineRequest
-    { }
+    class PipelineRDRequestTest : IPipelineRequest { }
 
-    class PipelineRDRequestTestValidator : AbstractValidator<PipelineRDRequestTest>
-    { }
+    class PipelineRDRequestTestValidator : AbstractValidator<PipelineRDRequestTest> { }
 
     class PipelineRDBuilderTest : IPipelineBuilder<PipelineRDContextTest>
     {
         public IPipelineInitializer<PipelineRDContextTest> Pipeline { get; }
 
         public PipelineRDBuilderTest(IPipelineInitializer<PipelineRDContextTest> pipeline) => Pipeline = pipeline;
+
+        public RequestStepResult CreateTest(PipelineRDRequestTest request)
+            => Pipeline
+                .Initialize()
+                .AddNext<IFirstTestStep>()
+                .AddNext<IFirstTestStep>()
+                .AddNext<IFirstTestStep>()
+                .AddNext<IFirstTestStep>()
+                .Execute(request);
     }
+
+    class PipelineRDBuilderTwoTest : IPipelineRDBuilderTwoTest
+    {
+        public IPipelineInitializer<PipelineRDContextTest> Pipeline { get; }
+
+        public PipelineRDBuilderTwoTest(IPipelineInitializer<PipelineRDContextTest> pipeline) => Pipeline = pipeline;
+    }
+
+    interface IPipelineRDBuilderTwoTest : IPipelineBuilder<PipelineRDContextTest>
+    { }
+
+    class FirstTestStep : RequestStep<PipelineRDContextTest>, IFirstTestStep
+    {
+        public override RequestStepResult HandleRequest() => this.Next();
+    }
+
+    interface IFirstTestStep : IRequestStep<PipelineRDContextTest> { }
 }

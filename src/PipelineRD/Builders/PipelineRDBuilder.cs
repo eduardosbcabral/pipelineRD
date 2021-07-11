@@ -12,8 +12,6 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-using static FluentValidation.AssemblyScanner;
-
 namespace PipelineRD.Builders
 {
     internal class PipelineRDBuilder : IPipelineRDBuilder
@@ -22,10 +20,22 @@ namespace PipelineRD.Builders
 
         public bool CacheSettingsIsConfigured { get; private set; }
         private bool _cacheIsConfigured;
+        private IEnumerable<TypeInfo> _types;
 
         public PipelineRDBuilder(IServiceCollection services)
         {
             _services = services;
+        }
+
+        public void UseDocumentation(Action<IDocumentationBuilder> configure)
+        {
+            if(_types == null)
+            {
+                _types = GetTypes();
+            }
+
+            var documentationBuilder = new DocumentationBuilder(_types, _services.BuildServiceProvider());
+            configure(documentationBuilder);
         }
 
         private void UseCacheSettings(ICacheSettings settings)
@@ -70,18 +80,22 @@ namespace PipelineRD.Builders
 
         public void AddPipelineServices()
         {
-            var types = GetTypes();
-            InjectContexts(types);
-            InjectSteps(types);
-            InjectRequestValidators(types);
-            InjectPipelineBuilders(types);
+            if (_types == null)
+            {
+                _types = GetTypes();
+            }
+
+            InjectContexts();
+            InjectSteps();
+            InjectRequestValidators();
+            InjectPipelineBuilders();
             InjectPipelineInitializers();
             InjectPipelines();
         }
 
-        private void InjectContexts(IEnumerable<TypeInfo> typeInfos)
+        private void InjectContexts()
         {
-            var contexts = typeInfos.Where(a => a.IsClass && a.BaseType == typeof(BaseContext));
+            var contexts = _types.Where(a => a.IsClass && a.BaseType == typeof(BaseContext));
 
             var duplicatedContexts = contexts.GroupBy(x => x.Name)
                 .Where(x => x.Count() > 1)
@@ -96,11 +110,11 @@ namespace PipelineRD.Builders
                 _services.AddScoped(context.AsType());
         }
 
-        private void InjectSteps(IEnumerable<TypeInfo> types)
+        private void InjectSteps()
         {
             var searchClasses = new Type[] { typeof(RequestStep<>), typeof(RollbackRequestStep<>) };
 
-            var steps = types
+            var steps = _types
                 .Where(x => !x.IsAbstract && x.IsClass && searchClasses.Any(t => IsSubclassOfGeneric(x, t)))
                 .Select(x => new
                 {
@@ -117,9 +131,9 @@ namespace PipelineRD.Builders
         private void InjectPipelines()
             => _services.AddTransient(typeof(IPipeline<>), typeof(Pipeline<>));
 
-        private void InjectRequestValidators(IEnumerable<TypeInfo> types)
+        private void InjectRequestValidators()
         {
-            var validators = from type in types
+            var validators = from type in _types
                 where !type.IsAbstract && !type.IsGenericTypeDefinition
                 let interfaces = type.GetInterfaces()
                 let genericInterfaces = interfaces.Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IValidator<>))
@@ -136,9 +150,9 @@ namespace PipelineRD.Builders
         private void InjectPipelineInitializers()
             => _services.AddSingleton(typeof(IPipelineInitializer<>), typeof(PipelineInitializer<>));
 
-        private void InjectPipelineBuilders(IEnumerable<TypeInfo> types)
+        private void InjectPipelineBuilders()
         {
-            var pipelineBuilders = from type in types
+            var pipelineBuilders = from type in _types
                 where !type.IsAbstract && !type.IsGenericTypeDefinition
                 let interfaces = type.GetInterfaces()
                 let genericInterfaces = interfaces.Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IPipelineBuilder<>))

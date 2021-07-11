@@ -21,7 +21,6 @@ namespace PipelineRD.Tests
 
         public ContextSample()
         {
-
         }
     }
 }

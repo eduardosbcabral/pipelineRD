@@ -35,6 +35,9 @@ namespace PipelineRD.Diagrams
             _builder = documentationBuilder;
             _flowchart = new Flowchart(Identifier);
             _nodes = new List<NodeR>();
+
+            var node = new Node("Begin", NodeShapes.Circle);
+            AddNodeR(node, ENodeType.Next);
         }
 
         public IPipeline<TContext> EnableRecoveryRequestByHash()
@@ -52,6 +55,9 @@ namespace PipelineRD.Diagrams
 
         public RequestStepResult Execute<TRequest>(TRequest request, string idempotencyKey) where TRequest : IPipelineRequest
         {
+            var node = new Node("Finish", NodeShapes.Circle);
+            AddNodeR(node, ENodeType.Next);
+
             ProcessNodes();
 
             _flowchart.SetName($"{Identifier} - {typeof(TRequest).Name}");
@@ -165,6 +171,59 @@ namespace PipelineRD.Diagrams
 
         private void ProcessNodes()
         {
+            foreach(var nodeR in _nodes)
+            {
+                if (!HasNextNodeR(nodeR))
+                    break;
+
+                var nextNodeR = NextNodeR(nodeR);
+                var currentNode = nodeR.Node;
+                var nextNode = nextNodeR.Node;
+
+                if (nodeR.Type == ENodeType.Rollback)
+                {
+                    var previousNode = PreviousNodeR(nodeR);
+                    if (previousNode != null)
+                    {
+                        _flowchart.Connect(previousNode.Node)
+                            .With(nextNode);
+                    }
+
+                    continue;
+                }
+
+                if (nodeR.Type == ENodeType.When)
+                {
+                    _flowchart.Connect(currentNode)
+                        .With(nextNode, "Yes", NodeLinkType.DottedLineArrow);
+
+                    if (HasNextNodeR(nextNodeR))
+                    {
+                        var next = NextNodeR(nextNodeR);
+                        _flowchart.With(next.Node, "No", NodeLinkType.DottedLineArrow);
+                    }
+
+                    continue;
+                }
+
+                if (nextNodeR.Type == ENodeType.Next)
+                {
+                    _flowchart.Connect(currentNode)
+                        .With(nextNode);
+                } 
+                else if(nextNodeR.Type == ENodeType.Rollback)
+                {
+                    _flowchart.Connect(currentNode)
+                      .With(nextNode, NodeLinkType.ThickLineArrow);
+                }
+                else if(nextNodeR.Type == ENodeType.When)
+                {
+                    _flowchart.Connect(currentNode)
+                      .With(nextNode);
+                }
+            }
+
+            return;
             foreach (var nodeR in _nodes)
             {
                 if (HasNextNodeR(nodeR) == false)
@@ -175,7 +234,7 @@ namespace PipelineRD.Diagrams
                 var node = nodeR.Node;
                 var nextNode = nextNodeR.Node;
 
-                if(nextNodeR.Type == ENodeType.Rollback)
+                if (nextNodeR.Type == ENodeType.Rollback)
                 {
                     _flowchart.Connect(node)
                       .With(nextNode, NodeLinkType.LineArrow);
@@ -193,15 +252,8 @@ namespace PipelineRD.Diagrams
                             .With(next.Node, NodeLinkType.ThickLineArrow);
                     }
                 }
-                else if(nodeR.Type == ENodeType.Rollback)
+                else if (nodeR.Type == ENodeType.Rollback)
                 {
-                    //var previousRollbackNodeR = PreviousNodeRByType(nodeR, ENodeType.Rollback);
-                    //if(previousRollbackNodeR != null)
-                    //{
-                    //    _flowchart.Connect(nodeR.Node)
-                    //        .With(previousRollbackNodeR.Node, NodeLinkType.ThickLineArrow);
-                    //}
-
                     var previousNode = PreviousNodeR(nodeR);
                     if (previousNode != null)
                     {
@@ -212,9 +264,9 @@ namespace PipelineRD.Diagrams
                 else
                 {
                     var previousNode = PreviousNodeR(nodeR);
-                    if(previousNode != null)
+                    if (previousNode != null)
                     {
-                        if(previousNode.Type != ENodeType.When)
+                        if (previousNode.Type != ENodeType.When)
                         {
                             _flowchart.Connect(node)
                                 .With(nextNode);
