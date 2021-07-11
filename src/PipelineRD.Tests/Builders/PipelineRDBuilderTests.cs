@@ -7,6 +7,7 @@ using PipelineRD.Settings;
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 
 using Xunit;
 
@@ -245,8 +246,8 @@ namespace PipelineRD.Tests.Builders
 
         public PipelineRDBuilderTest(IPipelineInitializer<PipelineRDContextTest> pipeline) => Pipeline = pipeline;
 
-        public RequestStepResult CreateTest(PipelineRDRequestTest request)
-            => Pipeline
+        public async Task<RequestStepResult> CreateTest(PipelineRDRequestTest request)
+            => await Pipeline
                 .Initialize()
                 .AddNext<IFirstTestStep>()
                 .AddNext<IFirstTestStep>()

@@ -1,13 +1,13 @@
 ﻿using FluentValidation;
 
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyModel;
+
+using PipelineRD.Async;
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 
 namespace PipelineRD.Builders
 {
@@ -64,7 +64,7 @@ namespace PipelineRD.Builders
         {
             if (_stepsAlreadySet) return;
 
-            var searchClasses = new Type[] { typeof(RequestStep<>), typeof(RollbackRequestStep<>) };
+            var searchClasses = new Type[] { typeof(RequestStep<>), typeof(RollbackRequestStep<>), typeof(AsyncRequestStep<>) };
 
             var steps = _types
                 .Where(x => !x.IsAbstract && x.IsClass && searchClasses.Any(t => IsSubclassOfGeneric(x, t)))
@@ -125,8 +125,8 @@ namespace PipelineRD.Builders
                                    where !type.IsAbstract && !type.IsGenericTypeDefinition
                                    let interfaces = type.GetInterfaces()
                                    let genericInterfaces = interfaces.Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IPipelineBuilder<>))
-                                   let matchingInterface = genericInterfaces.FirstOrDefault()
-                                   where matchingInterface != null
+                                   let matchingInterface = interfaces.FirstOrDefault()
+                                   where genericInterfaces.Any()
                                    select new { Interface = matchingInterface, Type = type };
 
             foreach (var builder in pipelineBuilders)

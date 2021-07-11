@@ -12,6 +12,7 @@ using PipelineRD.Tests.Validators;
 using System.Linq;
 using Polly;
 using System.Net;
+using System.Threading.Tasks;
 
 namespace PipelineRD.Tests
 {
@@ -50,7 +51,7 @@ namespace PipelineRD.Tests
         }
 
         [Fact]
-        public void Should_Pipeline_Validate_Request()
+        public async Task Should_Pipeline_Validate_Request()
         {
             var request = new SampleRequest() { ValidModel = false };
             var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
@@ -58,16 +59,15 @@ namespace PipelineRD.Tests
             pipeline.AddNext<IFirstSampleStep>();
             pipeline.AddNext<ISecondSampleStep>();
             pipeline.AddNext<IThirdSampleStep>();
-            pipeline.Execute(request);
 
-            var result = pipeline.Execute(request);
+            var result = await pipeline.Execute(request);
 
             Assert.Equal(400, result.StatusCode);
             Assert.Single(result.Errors);
         }
 
         [Fact]
-        public void Should_Pipeline_Validate_Request_Using_Validator_Implementation()
+        public async Task Should_Pipeline_Validate_Request_Using_Validator_Implementation()
         {
             var request = new SampleRequest() { ValidModel = false };
             var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
@@ -76,16 +76,15 @@ namespace PipelineRD.Tests
             pipeline.AddNext<IFirstSampleStep>();
             pipeline.AddNext<ISecondSampleStep>();
             pipeline.AddNext<IThirdSampleStep>();
-            pipeline.Execute(request);
 
-            var result = pipeline.Execute(request);
+            var result = await pipeline.Execute(request);
 
             Assert.Equal(400, result.StatusCode);
             Assert.Single(result.Errors);
         }
 
         [Fact]
-        public void Should_Pipeline_Finish_With_Status_200()
+        public async Task Should_Pipeline_Finish_With_Status_200()
         {
             var request = new SampleRequest();
             var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
@@ -93,7 +92,7 @@ namespace PipelineRD.Tests
             pipeline.AddNext<ISecondSampleStep>();
             pipeline.AddNext<IThirdSampleStep>();
 
-            var result = pipeline.Execute(request);
+            var result = await pipeline.Execute(request);
 
             Assert.Equal(200, result.StatusCode);
             Assert.True(pipeline.Context.FirstWasExecuted);
@@ -102,13 +101,13 @@ namespace PipelineRD.Tests
         }
 
         [Fact]
-        public void Should_Pipeline_Abort_With_Status_400()
+        public async Task Should_Pipeline_Abort_With_Status_400()
         {
             var request = new SampleRequest() { ValidFirst = false };
 
             var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
             pipeline.AddNext<IFirstSampleStep>();
-            var result = pipeline.Execute(request);
+            var result = await pipeline.Execute(request);
 
             Assert.Equal(400, result.StatusCode);
         }
@@ -198,7 +197,7 @@ namespace PipelineRD.Tests
         }
 
         [Fact]
-        public void Should_Second_Pipeline_Use_Recovery_By_Existent_Snapshot()
+        public async Task Should_Second_Pipeline_Use_Recovery_By_Existent_Snapshot()
         {
             var idempotencyKey = "key";
             var request = new SampleRequest() { ValidSecond = false };
@@ -207,7 +206,7 @@ namespace PipelineRD.Tests
             pipelineOne.AddNext<IFirstSampleStep>();
             pipelineOne.AddNext<ISecondSampleStep>();
 
-            pipelineOne.Execute(request, idempotencyKey);
+            await pipelineOne.Execute(request, idempotencyKey);
 
             var pipelineTwo = _serviceProvider.GetService<IPipeline<ContextSample>>();
             pipelineTwo.AddNext<IFirstSampleStep>();
@@ -216,7 +215,7 @@ namespace PipelineRD.Tests
 
             request.ValidSecond = true;
 
-            var pipelineTwoResult = pipelineTwo.Execute(request, idempotencyKey);
+            var pipelineTwoResult = await pipelineTwo.Execute(request, idempotencyKey);
 
             Assert.Equal(200, pipelineTwoResult.StatusCode);
         }
@@ -238,7 +237,7 @@ namespace PipelineRD.Tests
         }
 
         [Fact]
-        public void Should_Pipeline_Execute_All_Rollback_Steps()
+        public async Task Should_Pipeline_Execute_All_Rollback_Steps()
         {
             var request = new SampleRequest();
             var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
@@ -248,7 +247,7 @@ namespace PipelineRD.Tests
             pipeline.AddRollback<ISecondSampleRollbackStep>();
             pipeline.AddNext<IRollbackSampleStep>();
 
-            var pipelineResult = pipeline.Execute(request);
+            var pipelineResult = await pipeline.Execute(request);
 
             Assert.Equal(201, pipelineResult.StatusCode);
             Assert.True(pipeline.Context.FirstRollbackWasExecuted);
@@ -256,7 +255,7 @@ namespace PipelineRD.Tests
         }
 
         [Fact]
-        public void Should_Pipeline_Execute_Until_Certain_Index_Rollback_Steps()
+        public async Task Should_Pipeline_Execute_Until_Certain_Index_Rollback_Steps()
         {
             var request = new SampleRequest();
             var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
@@ -267,7 +266,7 @@ namespace PipelineRD.Tests
             pipeline.AddNext<IThirdSampleStep>();
             pipeline.AddRollback<ISecondSampleRollbackStep>();
 
-            var pipelineResult = pipeline.Execute(request);
+            var pipelineResult = await pipeline.Execute(request);
 
             Assert.Equal(201, pipelineResult.StatusCode);
             Assert.True(pipeline.Context.FirstRollbackWasExecuted);
@@ -286,7 +285,7 @@ namespace PipelineRD.Tests
             pipeline.AddNext<IFirstSampleStep>()
                 .WithPolicy(policy);
 
-            var currentStep = pipeline.Steps.FirstOrDefault();
+            var currentStep = (IRequestStep<ContextSample>)pipeline.Steps.FirstOrDefault();
             Assert.NotNull(currentStep.Policy);
         }
 

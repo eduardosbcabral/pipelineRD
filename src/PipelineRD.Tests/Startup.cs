@@ -18,10 +18,6 @@ namespace PipelineRD.Tests
                 x.AddPipelineServices(x => x.InjectAll());
             });
 
-            services.AddTransient(typeof(IPipelineDiagram<>), typeof(PipelineDiagram<>));
-
-            //services.GeneratePipelineDiagrams();
-
             services.AddSingleton<ISampleCondition, SampleCondition>();
         }
     }

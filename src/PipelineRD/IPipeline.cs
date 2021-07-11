@@ -1,10 +1,13 @@
 ﻿using FluentValidation;
 
+using PipelineRD.Async;
+
 using Polly;
 
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
 
 namespace PipelineRD
 {
@@ -13,7 +16,7 @@ namespace PipelineRD
         TContext Context { get; }
         string CurrentRequestStepIdentifier { get; }
         string Identifier { get; }
-        IReadOnlyCollection<IRequestStep<TContext>> Steps { get; }
+        IReadOnlyCollection<IStep<TContext>> Steps { get; }
 
         #region RecoveryHash
         IPipeline<TContext> EnableRecoveryRequestByHash();
@@ -21,14 +24,14 @@ namespace PipelineRD
         #endregion
 
         #region Execute
-        RequestStepResult Execute<TRequest>(TRequest request) where TRequest : IPipelineRequest;
-        RequestStepResult Execute<TRequest>(TRequest request, string idempotencyKey) where TRequest : IPipelineRequest;
-        RequestStepResult ExecuteFromSpecificRequestStep(string requestStepIdentifier);
-        RequestStepResult ExecuteNextRequestStep();
+        Task<RequestStepResult> Execute<TRequest>(TRequest request) where TRequest : IPipelineRequest;
+        Task<RequestStepResult> Execute<TRequest>(TRequest request, string idempotencyKey) where TRequest : IPipelineRequest;
+        Task<RequestStepResult> ExecuteFromSpecificRequestStep(string requestStepIdentifier);
+        Task<RequestStepResult> ExecuteNextRequestStep();
         #endregion
 
         #region AddNext
-        IPipeline<TContext> AddNext<TRequestStep>() where TRequestStep : IRequestStep<TContext>;
+        IPipeline<TContext> AddNext<TRequestStep>() where TRequestStep : IStep<TContext>;
         #endregion
 
         #region AddValidator
@@ -38,6 +41,7 @@ namespace PipelineRD
 
         #region AddPolicy
         IPipeline<TContext> WithPolicy(Policy<RequestStepResult> policy);
+        IPipeline<TContext> WithPolicy(AsyncPolicy<RequestStepResult> policy);
         #endregion
 
         #region AddCondition
@@ -46,14 +50,14 @@ namespace PipelineRD
         #endregion
 
         #region AddRollback
-        IPipeline<TContext> AddRollback(IRollbackRequestStep<TContext> rollbackStep);
-        IPipeline<TContext> AddRollback<TRollbackRequestStep>() where TRollbackRequestStep : IRollbackRequestStep<TContext>;
+        IPipeline<TContext> AddRollback(IRollbackStep<TContext> rollbackStep);
+        IPipeline<TContext> AddRollback<TRollbackRequestStep>() where TRollbackRequestStep : IRollbackStep<TContext>;
         #endregion
 
         #region AddFinally
-        IPipeline<TContext> AddFinally<TRequestStep>() where TRequestStep : IRequestStep<TContext>;
+        IPipeline<TContext> AddFinally<TRequestStep>() where TRequestStep : IStep<TContext>;
         #endregion
 
-        void ExecuteRollback();
+       Task ExecuteRollback();
     }
 }

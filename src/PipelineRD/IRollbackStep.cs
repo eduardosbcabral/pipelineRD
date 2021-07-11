@@ -1,13 +1,10 @@
-﻿using Polly;
-
-using System;
+﻿using System;
 using System.Linq.Expressions;
 
 namespace PipelineRD
 {
-    public interface IStep<TPipelineContext> where TPipelineContext : BaseContext
+    public interface IRollbackStep<TPipelineContext> where TPipelineContext : BaseContext
     {
-        string Identifier { get; }
         TPipelineContext Context { get; }
         Expression<Func<TPipelineContext, bool>> ConditionToExecute { get; set; }
         void SetPipeline(IPipeline<TPipelineContext> pipeline);

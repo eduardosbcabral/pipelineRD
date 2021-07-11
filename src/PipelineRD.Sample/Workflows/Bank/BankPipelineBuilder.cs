@@ -5,6 +5,7 @@ using PipelineRD.Sample.Workflows.Bank.SharedSteps;
 using Polly;
 
 using System;
+using System.Threading.Tasks;
 
 namespace PipelineRD.Sample.Workflows.Bank
 {
@@ -17,10 +18,10 @@ namespace PipelineRD.Sample.Workflows.Bank
             Pipeline = pipeline;
         }
 
-        public RequestStepResult CreateAccount(CreateAccountModel model)
+        public async Task<RequestStepResult> CreateAccount(CreateAccountModel model)
         {
             var requestKey = Guid.NewGuid().ToString();
-            return Pipeline
+            return await Pipeline
                 .Initialize(requestKey)
                 .EnableRecoveryRequestByHash()
                 .AddNext<ISearchAccountStep>()
@@ -34,9 +35,9 @@ namespace PipelineRD.Sample.Workflows.Bank
                 .Execute(model);
         }
 
-        public RequestStepResult DepositAccount(DepositAccountModel model)
+        public async Task<RequestStepResult> DepositAccount(DepositAccountModel model)
         {
-            return Pipeline
+            return await Pipeline
                 .Initialize()
                 .AddNext<ISearchAccountStep>()
                 .AddNext<ISearchAccountStep>()
@@ -49,7 +50,7 @@ namespace PipelineRD.Sample.Workflows.Bank
 
     public interface IBankPipelineBuilder : IPipelineBuilder<BankContext>
     {
-        RequestStepResult CreateAccount(CreateAccountModel model);
-        RequestStepResult DepositAccount(DepositAccountModel model);
+        Task<RequestStepResult> CreateAccount(CreateAccountModel model);
+        Task<RequestStepResult> DepositAccount(DepositAccountModel model);
     }
 }

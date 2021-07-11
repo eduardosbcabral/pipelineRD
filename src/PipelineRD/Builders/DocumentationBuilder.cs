@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace PipelineRD
 {
@@ -63,7 +64,7 @@ namespace PipelineRD
                 var builderWithDiagramInstance = Activator.CreateInstance(builder.Type, args);
                 var builderMethods = builder.Type.GetMethods();
 
-                foreach (var method in builderMethods.Where(m => m.ReturnType == typeof(RequestStepResult)))
+                foreach (var method in builderMethods.Where(m => m.ReturnType == typeof(Task<RequestStepResult>)))
                 {
                     var parameter = method.GetParameters().FirstOrDefault();
                     var requestInstance = Activator.CreateInstance(parameter.ParameterType, null);

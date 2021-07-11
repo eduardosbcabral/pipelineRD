@@ -11,10 +11,11 @@ using System.Collections.Generic;
 using System.Linq;
 using DiagramBuilder.Html;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
 
 namespace PipelineRD.Diagrams
 {
-    public class PipelineDiagram<TContext> : IPipeline<TContext> where TContext : BaseContext
+    internal class PipelineDiagram<TContext> : IPipeline<TContext> where TContext : BaseContext
     {
         public string Identifier => $"Pipeline({typeof(TContext).Name})";
 
@@ -22,7 +23,7 @@ namespace PipelineRD.Diagrams
 
         public string CurrentRequestStepIdentifier => throw new NotImplementedException();
 
-        public IReadOnlyCollection<IRequestStep<TContext>> Steps => throw new NotImplementedException();
+        public IReadOnlyCollection<IStep<TContext>> Steps => throw new NotImplementedException();
 
         private readonly DocumentationBuilder _builder;
         private readonly Flowchart _flowchart;
@@ -50,10 +51,10 @@ namespace PipelineRD.Diagrams
             return this;
         }
 
-        public RequestStepResult Execute<TRequest>(TRequest request) where TRequest : IPipelineRequest
+        public Task<RequestStepResult> Execute<TRequest>(TRequest request) where TRequest : IPipelineRequest
             => Execute(request, string.Empty);
 
-        public RequestStepResult Execute<TRequest>(TRequest request, string idempotencyKey) where TRequest : IPipelineRequest
+        public Task<RequestStepResult> Execute<TRequest>(TRequest request, string idempotencyKey) where TRequest : IPipelineRequest
         {
             var node = new Node("Finish", NodeShapes.Circle);
             AddNodeR(node, ENodeType.Next);
@@ -66,16 +67,16 @@ namespace PipelineRD.Diagrams
             customDiagram.AddPreClassDiagram(new HtmlClassDiagram("Request", request));
             _builder.AddDiagram(customDiagram);
 
-            return null;
+            return Task.FromResult(new RequestStepResult());
         }
 
-        public RequestStepResult ExecuteFromSpecificRequestStep(string requestStepIdentifier) => null;
+        public Task<RequestStepResult> ExecuteFromSpecificRequestStep(string requestStepIdentifier) => null;
 
-        public RequestStepResult ExecuteNextRequestStep() => null;
+        public Task<RequestStepResult> ExecuteNextRequestStep() => null;
 
-        public IPipeline<TContext> AddNext<TRequestStep>() where TRequestStep : IRequestStep<TContext>
+        public IPipeline<TContext> AddNext<TRequestStep>() where TRequestStep : IStep<TContext>
         {
-            var requestStep = (IRequestStep<TContext>)_serviceProvider.GetService<TRequestStep>();
+            var requestStep = (IStep<TContext>)_serviceProvider.GetService<TRequestStep>();
             if (requestStep == null)
             {
                 throw new NullReferenceException("[PipelineDiagram] Request step not found.");
@@ -106,6 +107,16 @@ namespace PipelineRD.Diagrams
             return this;
         }
 
+        public IPipeline<TContext> WithPolicy(AsyncPolicy<RequestStepResult> policy)
+        {
+            var currentNode = _nodes.LastOrDefault(x => x.Type == ENodeType.Next);
+            if (currentNode != null)
+            {
+                currentNode.Node.Text += " - With Policy";
+            }
+            return this;
+        }
+
         public IPipeline<TContext> When(Expression<Func<TContext, bool>> condition)
         {
             var expressionBody = ExpressionBody(condition);
@@ -126,7 +137,7 @@ namespace PipelineRD.Diagrams
             return this;
         }
 
-        public IPipeline<TContext> AddRollback(IRollbackRequestStep<TContext> rollbackStep)
+        public IPipeline<TContext> AddRollback(IRollbackStep<TContext> rollbackStep)
         {
             if (rollbackStep == null)
             {
@@ -138,21 +149,26 @@ namespace PipelineRD.Diagrams
             return this;
         }
 
-        public IPipeline<TContext> AddRollback<TRollbackRequestStep>() where TRollbackRequestStep : IRollbackRequestStep<TContext>
+        public IPipeline<TContext> AddRollback<TRollbackRequestStep>() where TRollbackRequestStep : IRollbackStep<TContext>
         {
-            var rollbackStep = (IRollbackRequestStep<TContext>)_serviceProvider.GetService<TRollbackRequestStep>();
+            var rollbackStep = (IRollbackStep<TContext>)_serviceProvider.GetService<TRollbackRequestStep>();
             return AddRollback(rollbackStep);
         }
 
-        public IPipeline<TContext> AddFinally<TRequestStep>() where TRequestStep : IRequestStep<TContext>
+        public IPipeline<TContext> AddFinally<TRequestStep>() where TRequestStep : IStep<TContext>
         {
-            throw new NotImplementedException();
+            var requestStep = (IStep<TContext>)_serviceProvider.GetService<TRequestStep>();
+            if (requestStep == null)
+            {
+                throw new NullReferenceException("[PipelineDiagram] Request step not found.");
+            }
+
+            var node = new Node(requestStep.GetType().Name);
+            AddNodeR(node, ENodeType.Next);
+            return this;
         }
 
-        public void ExecuteRollback()
-        {
-            throw new NotImplementedException();
-        }
+        public Task ExecuteRollback() { return null; }
 
         private static string ExpressionBody<T>(Expression<Func<T, bool>> exp)
         {

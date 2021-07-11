@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net;
+using System.Threading.Tasks;
 
 using FluentValidation;
 
 using Microsoft.Extensions.DependencyInjection;
 
+using PipelineRD.Async;
 using PipelineRD.Builders;
 using PipelineRD.Extensions;
 
@@ -23,7 +25,7 @@ namespace PipelineRD
         public TContext Context { get; private set; }
         public string CurrentRequestStepIdentifier { get; private set; }
         public virtual string Identifier => $"Pipeline<{typeof(TContext).Name}>";
-        public IReadOnlyCollection<IRequestStep<TContext>> Steps => _requestSteps;
+        public IReadOnlyCollection<IStep<TContext>> Steps => _requestSteps;
 
         protected readonly IServiceProvider _serviceProvider;
         protected readonly ICacheProvider _cacheProvider;
@@ -31,15 +33,15 @@ namespace PipelineRD
         protected readonly string _requestKey;
         protected bool _useReuseRequisitionHash;
         protected bool _finallyStepIsSet = false;
-        protected readonly Queue<IRequestStep<TContext>> _requestSteps;
-        protected readonly Stack<IRollbackRequestStep<TContext>> _rollbacks;
+        protected readonly Queue<IStep<TContext>> _requestSteps;
+        protected readonly Stack<IRollbackStep<TContext>> _rollbacks;
 
         #region Constructors
         private Pipeline()
         {
             _useReuseRequisitionHash = true;
-            _rollbacks = new Stack<IRollbackRequestStep<TContext>>();
-            _requestSteps = new Queue<IRequestStep<TContext>>();
+            _rollbacks = new Stack<IRollbackStep<TContext>>();
+            _requestSteps = new Queue<IStep<TContext>>();
         }
 
         public Pipeline(IServiceProvider serviceProvider, string requestKey = null) : this()
@@ -66,14 +68,14 @@ namespace PipelineRD
         #endregion
 
         #region AddNext
-        public IPipeline<TContext> AddNext<TRequestStep>() where TRequestStep : IRequestStep<TContext>
+        public IPipeline<TContext> AddNext<TRequestStep>() where TRequestStep : IStep<TContext>
         {
             if (_finallyStepIsSet)
             {
                 throw new PipelineException("Finally request step is already set. Cannot add a new step.");
             }
 
-            var requestStep = (IRequestStep<TContext>)_serviceProvider.GetService<TRequestStep>();
+            var requestStep = (IStep<TContext>)_serviceProvider.GetService<TRequestStep>();
             if (requestStep == null)
             {
                 throw new NullReferenceException("Request step not found.");
@@ -106,7 +108,18 @@ namespace PipelineRD
         #region AddPolicy
         public IPipeline<TContext> WithPolicy(Policy<RequestStepResult> policy)
         {
-            var lastStepRequest = LastStep();
+            var lastStepRequest = LastStep() as IRequestStep<TContext>;
+            if (policy != null && lastStepRequest != null)
+            {
+                lastStepRequest.Policy = policy;
+            }
+
+            return this;
+        }
+
+        public IPipeline<TContext> WithPolicy(AsyncPolicy<RequestStepResult> policy)
+        {
+            var lastStepRequest = LastStep() as IAsyncRequestStep<TContext>;
             if (policy != null && lastStepRequest != null)
             {
                 lastStepRequest.Policy = policy;
@@ -141,17 +154,18 @@ namespace PipelineRD
         #endregion
 
         #region AddRollback
-        public IPipeline<TContext> AddRollback<TRollbackRequestStep>() where TRollbackRequestStep : IRollbackRequestStep<TContext>
+        public IPipeline<TContext> AddRollback<TRollbackRequestStep>() where TRollbackRequestStep : IRollbackStep<TContext>
         {
-            var rollbackStep = (IRollbackRequestStep<TContext>)_serviceProvider.GetService<TRollbackRequestStep>();
+            var rollbackStep = (IRollbackStep<TContext>)_serviceProvider.GetService<TRollbackRequestStep>();
             if (rollbackStep == null)
             {
                 throw new NullReferenceException("Rollback request step not found.");
             }
+
             return AddRollback(rollbackStep);
         }
 
-        public IPipeline<TContext> AddRollback(IRollbackRequestStep<TContext> rollbackStep)
+        public IPipeline<TContext> AddRollback(IRollbackStep<TContext> rollbackStep)
         {
             var lastStep = LastStep();
             if (lastStep != null)
@@ -167,7 +181,7 @@ namespace PipelineRD
             return this;
         }
 
-        public void ExecuteRollback()
+        public async Task ExecuteRollback()
         {
             var remainingFirstStepThatHaveRollback = _requestSteps.FirstOrDefault(x => x.RollbackIndex.HasValue);
 
@@ -177,13 +191,20 @@ namespace PipelineRD
 
             foreach(var rollbackStep in _rollbacks.Where(rollbackHandler => rollbackHandler.RollbackIndex < executeRollbackUntilIndex))
             {
-                rollbackStep.Execute();
+                if(rollbackStep.GetType() == typeof(IAsyncRollbackRequestStep<TContext>))
+                {
+                    await ((IAsyncRollbackRequestStep<TContext>)rollbackStep).Execute();
+                }
+                else
+                {
+                    ((IRollbackRequestStep<TContext>)rollbackStep).Execute();
+                }
             }
         }
         #endregion
 
         #region AddFinally
-        public IPipeline<TContext> AddFinally<TRequestStep>() where TRequestStep : IRequestStep<TContext>
+        public IPipeline<TContext> AddFinally<TRequestStep>() where TRequestStep : IStep<TContext>
         {
             AddNext<TRequestStep>();
             _finallyStepIsSet = true;
@@ -192,10 +213,10 @@ namespace PipelineRD
         #endregion
 
         #region Execute
-        public virtual RequestStepResult Execute<TRequest>(TRequest request) where TRequest : IPipelineRequest
-            => Execute(request, string.Empty);
+        public async Task<RequestStepResult> Execute<TRequest>(TRequest request) where TRequest : IPipelineRequest
+            => await Execute (request, string.Empty);
 
-        public virtual RequestStepResult Execute<TRequest>(TRequest request, string idempotencyKey) where TRequest : IPipelineRequest
+        public async Task<RequestStepResult> Execute<TRequest>(TRequest request, string idempotencyKey) where TRequest : IPipelineRequest
         {
             var headStep = HeadStep();
             if (headStep == null)
@@ -253,7 +274,7 @@ namespace PipelineRD
             // Set the Request in the shared Context
             Context.Request = request;
 
-            var pipelineResult = ExecutePipeline(firstStepIdentifier);
+            var pipelineResult = await ExecutePipeline(firstStepIdentifier);
 
             if (pipelineResult == null)
             {
@@ -267,41 +288,57 @@ namespace PipelineRD
                     CurrentRequestStepIdentifier,
                     Context);
 
-                _cacheProvider.Add(snapshot, hash);
+                await _cacheProvider.Add(snapshot, hash);
             }
 
             return pipelineResult;
         }
 
-        public RequestStepResult ExecuteFromSpecificRequestStep(string requestStepIdentifier)
+        public async Task<RequestStepResult> ExecuteFromSpecificRequestStep(string requestStepIdentifier)
         {
             if (CurrentRequestStepIdentifier.Equals(requestStepIdentifier, StringComparison.InvariantCultureIgnoreCase))
             {
-                return ExecuteNextRequestStep();
+                return await ExecuteNextRequestStep();
             }
 
             DequeueCurrentStep();
             SetCurrentRequestStepIdentifier(HeadStep());
-            return ExecuteFromSpecificRequestStep(requestStepIdentifier);
+            return await ExecuteFromSpecificRequestStep(requestStepIdentifier);
         }
 
-        public RequestStepResult ExecuteNextRequestStep() 
+        public async Task<RequestStepResult> ExecuteNextRequestStep() 
         {
             var currentStep = DequeueCurrentStep();
             SetCurrentRequestStepIdentifier(currentStep);
 
             if (currentStep.ConditionToExecute is null || currentStep.ConditionToExecute.Compile().Invoke(currentStep.Context))
             {
-                var result = currentStep.Execute();
+                RequestStepResult result;
+
+                if(currentStep.GetType() == typeof(IAsyncRequestStep<TContext>))
+                {
+                    result = await ((IAsyncRequestStep<TContext>)currentStep).Execute();
+                } 
+                else
+                {
+                    result = ((IRequestStep<TContext>)currentStep).Execute();
+                }
+
                 return result;
             }
 
-            return ExecuteNextRequestStep();
+            return await ExecuteNextRequestStep();
         }
+
+        private async Task<RequestStepResult> ExecuteStep(IAsyncRequestStep<TContext> step)
+            => await step.Execute();
+
+        private RequestStepResult ExecuteStep(IRequestStep<TContext> step)
+            => step.Execute();
         #endregion
 
         #region Protected Methods
-        private RequestStepResult ExecutePipeline(string firstStepIdentifier)
+        private async Task<RequestStepResult> ExecutePipeline(string firstStepIdentifier)
         {
             RequestStepResult pipelineResult = null;
 
@@ -309,11 +346,11 @@ namespace PipelineRD
             {
                 if (!string.IsNullOrEmpty(firstStepIdentifier))
                 {
-                    pipelineResult = ExecuteFromSpecificRequestStep(firstStepIdentifier);
+                    pipelineResult = await ExecuteFromSpecificRequestStep(firstStepIdentifier);
                 }
                 else
                 {
-                    pipelineResult = ExecuteNextRequestStep();
+                    pipelineResult = await ExecuteNextRequestStep();
                 }
             }
             catch (PipelinePolicyException pipelinePolicyException)
@@ -333,32 +370,39 @@ namespace PipelineRD
             finally
             {
                 if (_finallyStepIsSet) {
-                    pipelineResult = ExecuteFinallyHandler();
+                    pipelineResult = await ExecuteFinallyHandler();
                 }
             }
 
             return pipelineResult;
         }
 
-        private RequestStepResult ExecuteFinallyHandler()
+        private async Task<RequestStepResult> ExecuteFinallyHandler()
         {
             RequestStepResult result = null;
 
             var lastStep = LastStep();
             if (lastStep != null)
             {
-                result = lastStep.Execute();
+                if (lastStep.GetType() == typeof(IAsyncRequestStep<TContext>))
+                {
+                    result = await ((IAsyncRequestStep<TContext>)lastStep).Execute();
+                }
+                else
+                {
+                    result = ((IRequestStep<TContext>)lastStep).Execute();
+                }
             }
 
             return result;
         }
 
-        protected IRequestStep<TContext> LastStep() => _requestSteps.LastOrDefault();
-        protected IRequestStep<TContext> HeadStep() => _requestSteps.FirstOrDefault();
-        private IRequestStep<TContext> DequeueCurrentStep()
+        protected IStep<TContext> LastStep() => _requestSteps.LastOrDefault();
+        protected IStep<TContext> HeadStep() => _requestSteps.FirstOrDefault();
+        private IStep<TContext> DequeueCurrentStep()
             => _requestSteps.Dequeue();
 
-        private void SetCurrentRequestStepIdentifier(IRequestStep<TContext> step)
+        private void SetCurrentRequestStepIdentifier(IStep<TContext> step)
         {
             CurrentRequestStepIdentifier = step.Identifier;
         }
