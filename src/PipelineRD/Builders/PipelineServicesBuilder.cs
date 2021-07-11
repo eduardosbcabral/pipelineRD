@@ -86,7 +86,7 @@ namespace PipelineRD.Builders
         {
             if (_pipelinesAlreadySet) return;
 
-            _services.AddTransient(typeof(IPipeline<>), typeof(Pipeline<>));
+            _services.AddScoped(typeof(IPipeline<>), typeof(Pipeline<>));
             _pipelinesAlreadySet = true;
         }
 
@@ -113,7 +113,7 @@ namespace PipelineRD.Builders
         public void InjectPipelineInitializers()
         {
             if (_initializersAlreadySet) return;
-            _services.AddSingleton(typeof(IPipelineInitializer<>), typeof(PipelineInitializer<>));
+            _services.AddScoped(typeof(IPipelineInitializer<>), typeof(PipelineInitializer<>));
             _initializersAlreadySet = true;
         }
 
@@ -130,7 +130,7 @@ namespace PipelineRD.Builders
                                    select new { Interface = matchingInterface, Type = type };
 
             foreach (var builder in pipelineBuilders)
-                _services.AddTransient(builder.Interface, builder.Type);
+                _services.AddScoped(builder.Interface, builder.Type);
 
             _buildersAlreadySet = true;
         }

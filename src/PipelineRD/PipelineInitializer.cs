@@ -6,15 +6,19 @@ namespace PipelineRD
 {
     public class PipelineInitializer<TContext> : IPipelineInitializer<TContext> where TContext : BaseContext
     {
-        private readonly IServiceProvider _serviceProvider;
+        private readonly IPipeline<TContext> _pipeline;
 
-        public PipelineInitializer(IServiceProvider serviceProvider)
+        public PipelineInitializer(IPipeline<TContext> pipeline)
         {
-            _serviceProvider = serviceProvider;
+            _pipeline = pipeline;
         }
 
-        public IPipeline<TContext> Initialize() => new Pipeline<TContext>(_serviceProvider);
-        public IPipeline<TContext> Initialize(string requestKey) => new Pipeline<TContext>(_serviceProvider, requestKey);
+        public IPipeline<TContext> Initialize() => _pipeline;
+        public IPipeline<TContext> Initialize(string requestKey)
+        {
+            _pipeline.SetRequestKey(requestKey);
+            return _pipeline;
+        }
     }
 
     internal class PipelineInitializerDiagram<TContext> : IPipelineInitializer<TContext> where TContext : BaseContext
@@ -36,7 +40,5 @@ namespace PipelineRD
     {
         IPipeline<TContext> Initialize();
         IPipeline<TContext> Initialize(string requestKey);
-
-        //IPipeline<TContext> Start(string diagramTitle, string diagramDescription);
     }
 }

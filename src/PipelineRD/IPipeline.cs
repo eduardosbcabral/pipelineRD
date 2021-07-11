@@ -17,6 +17,7 @@ namespace PipelineRD
         string CurrentRequestStepIdentifier { get; }
         string Identifier { get; }
         IReadOnlyCollection<IStep<TContext>> Steps { get; }
+        void SetRequestKey(string requestKey);
 
         #region RecoveryHash
         IPipeline<TContext> EnableRecoveryRequestByHash();

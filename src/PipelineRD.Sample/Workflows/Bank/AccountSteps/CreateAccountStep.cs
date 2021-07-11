@@ -9,7 +9,7 @@ namespace PipelineRD.Sample.Workflows.Bank.AccountSteps
         public override RequestStepResult HandleRequest()
         {
             var request = this.Request<CreateAccountModel>();
-
+            if (request.Cidade == "SP") return this.Rollback(400);
             Console.WriteLine("CreateAccountStep");
             
             return this.Next();

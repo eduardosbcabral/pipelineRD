@@ -30,7 +30,7 @@ namespace PipelineRD
         protected readonly IServiceProvider _serviceProvider;
         protected readonly ICacheProvider _cacheProvider;
         protected IValidator _validator;
-        protected readonly string _requestKey;
+        protected string _requestKey;
         protected bool _useReuseRequisitionHash;
         protected bool _finallyStepIsSet = false;
         protected readonly Queue<IStep<TContext>> _requestSteps;
@@ -52,6 +52,8 @@ namespace PipelineRD
             Context = serviceProvider.GetService<TContext>();
         }
         #endregion
+
+        public void SetRequestKey(string requestKey) => _requestKey = requestKey;
 
         #region RecoveryRequestByHash
         public IPipeline<TContext> EnableRecoveryRequestByHash()

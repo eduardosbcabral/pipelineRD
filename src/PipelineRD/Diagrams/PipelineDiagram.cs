@@ -41,6 +41,8 @@ namespace PipelineRD.Diagrams
             AddNodeR(node, ENodeType.Next);
         }
 
+        public void SetRequestKey(string requestKey) { }
+
         public IPipeline<TContext> EnableRecoveryRequestByHash()
         {
             return this;
