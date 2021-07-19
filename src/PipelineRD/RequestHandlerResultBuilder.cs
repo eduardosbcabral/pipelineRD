@@ -71,6 +71,6 @@ namespace PipelineRD
 
         public RequestStepResult Build() => this.Handler;
 
-        public static RequestStepHandlerResultBuilder Instance() => new();
+        public static RequestStepHandlerResultBuilder Instance() => new RequestStepHandlerResultBuilder();
     }
 }

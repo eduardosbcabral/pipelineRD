@@ -121,7 +121,7 @@ namespace PipelineRD.Tests.Builders
         }
 
         [Fact]
-        public void Should_UsePipelineRD_AddPipelineServices_And_Check_If_IPipeline_Is_Transient()
+        public void Should_UsePipelineRD_AddPipelineServices_And_Check_If_IPipeline_Is_Scoped()
         {
             var services = new ServiceCollection();
 
@@ -136,7 +136,7 @@ namespace PipelineRD.Tests.Builders
             var service = services.FirstOrDefault(x => x.ServiceType == typeof(IPipeline<>));
 
             Assert.NotNull(service);
-            Assert.Equal(ServiceLifetime.Transient, service.Lifetime);
+            Assert.Equal(ServiceLifetime.Scoped, service.Lifetime);
         }
 
         [Fact]
@@ -159,7 +159,7 @@ namespace PipelineRD.Tests.Builders
         }
 
         [Fact]
-        public void Should_UsePipelineRD_AddPipelineServices_And_Check_If_IPipelineInitializer_Is_Singleton()
+        public void Should_UsePipelineRD_AddPipelineServices_And_Check_If_IPipelineInitializer_Is_Scoped()
         {
             var services = new ServiceCollection();
 
@@ -174,11 +174,11 @@ namespace PipelineRD.Tests.Builders
             var service = services.FirstOrDefault(x => x.ServiceType == typeof(IPipelineInitializer<>));
 
             Assert.NotNull(service);
-            Assert.Equal(ServiceLifetime.Singleton, service.Lifetime);
+            Assert.Equal(ServiceLifetime.Scoped, service.Lifetime);
         }
 
         [Fact]
-        public void Should_UsePipelineRD_AddPipelineServices_And_Check_If_IPipelineBuilder_Is_Transient()
+        public void Should_UsePipelineRD_AddPipelineServices_And_Check_If_IPipelineBuilder_Is_Scoped()
         {
             var services = new ServiceCollection();
 
@@ -193,7 +193,7 @@ namespace PipelineRD.Tests.Builders
             var service = services.FirstOrDefault(x => x.ServiceType == typeof(IPipelineBuilder<PipelineRDContextTest>));
 
             Assert.NotNull(service);
-            Assert.Equal(ServiceLifetime.Transient, service.Lifetime);
+            Assert.Equal(ServiceLifetime.Scoped, service.Lifetime);
         }
 
         [Fact]
