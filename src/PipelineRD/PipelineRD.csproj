@@ -3,6 +3,10 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFrameworks>netstandard2.0;netstandard2.1;</TargetFrameworks>
+    <PackageId>PipelineRD</PackageId>
+    <Authors>Eduardo Cabral</Authors>
+    <PackageDescription>A chain of responsability pattern implementation in .NET that supports retry policy, sync and async steps, rollback, pipeline recovery by cache and visual documentation using diagrams.</PackageDescription>
+    <RepositoryUrl>https://github.com/eduardosbcabral/pipelineRD</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>

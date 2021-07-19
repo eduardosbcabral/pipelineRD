@@ -1,0 +1,124 @@
+variables:
+- group: 'Credentials'
+- name: SOLUTION_PATH
+  value: src/
+- name: MAIN_PROJECT_PATH
+  value: src/PipelineRD
+- name: TEST_PROJECT_PATH
+  value: src/PipelineRD.Tests
+- name: BUILD_CONFIGURATION
+  value: 'Release'
+
+trigger:
+  branches:
+    include:
+    - release/*  
+    - hotfix/*
+  tags:
+    include:
+    - '*'
+
+pr:
+  branches:
+    include:
+    - develop
+    - master
+
+# trigger:
+#   branches:
+#     include:
+#     - main
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+- stage: BuildApplication
+  displayName: 'Build Application'
+  jobs:
+  - job: 'UpdateBuildVersion'
+    displayName: 'Update build version' 
+    steps:
+    # In these steps we do not need to checkout the code
+    - checkout: none
+    # It will update the pipeline build version based on the reason of the trigger.
+    # If it is a tag trigger, it will set the build version as the git tag version.
+    - bash: |
+        if [[ "$(Build.SourceBranch)" =~ "/tags/" ]];
+        then
+          echo "Generate Release Version"
+          echo "Version: $(Build.SourceBranchName)"
+          echo "##vso[build.updatebuildnumber]$(Build.SourceBranchName)"
+        fi
+      displayName: Update Version Number
+      name: UpdateBuildVersionNumberTask
+    # Get the previous build status and check if the returned XML from curl request
+    # has a string 'succeeded' and if it is not ok, it will stop the execution of current build 
+    # It will execute it just when the trigger is a tag.
+    # - bash: |
+    #     STAGING_URL="$(System. CollectionUri)/$(System.TeamProject)/_apis/build/status/$(System.DefinitionId)?branchName=$(UpdateBuildVersionTask.PreviousPrefix)/$(Build.BuildNumber)&stageName=DeployPackage"
+    #     STAGING_RESULT=$`curl --silent $STAGING_URL`
+    #     echo "URL: $STAGING_URL" 
+    #     echo "RESULT: $STAGING_RESULT"
+    #     SUCCEEDED=$`echo $STAGING_RESULT | grep -P 'succeeded' -o | head -n 1`
+    #     if [[ "$STAGING_RESULT" =~ "succeeded" ]];
+    #     then
+    #         echo "$PREVIOUS_PREFIX branch is ok!"
+    #     else
+    #         echo "$PREVIOUS_PREFIX branch is not ok!"
+    #         exit 1
+    #     fi
+    #   condition: contains(variables['Build.SourceBranch'], '/tags/')
+    #   displayName: 'Break if release branch is not passing'
+    #   name: BreakIsReleaseNotPassing
+  - job: 'Build'
+    displayName: 'Build'
+    dependsOn: 'UpdateBuildVersion'
+    condition: eq(dependencies.UpdateBuildVersion.result, 'Succeeded')
+    steps:
+    - task: DotNetCoreCLI@2
+      displayName: 'Restore Solution'
+      inputs:
+        command: 'restore'
+        projects: '$(SOLUTION_PATH)/**/*.csproj'
+    - task: DotNetCoreCLI@2
+      displayName: 'Build Solution'
+      inputs:
+        command: 'build'
+        arguments: '$(SOLUTION_PATH) --configuration $(BUILD_CONFIGURATION) --no-restore'
+    - task: DotNetCoreCLI@2
+      displayName: 'Run Unit Tests'
+      inputs:
+        command: test
+        projects: '$(TEST_PROJECT_PATH)/*.csproj'
+        arguments: '--configuration $(BUILD_CONFIGURATION) --no-restore --no-build --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura'
+        publishTestResults: true
+    - task: PublishCodeCoverageResults@1
+      displayName: 'Publish code coverage report'
+      inputs:
+        codeCoverageTool: 'Cobertura'
+        summaryFileLocation: '$(Agent.TempDirectory)/*/coverage.cobertura.xml'
+        failIfCoverageEmpty: true
+    - task: DotNetCoreCLI@2
+      displayName: 'Pack Nuget Package ($(BUILD_CONFIGURATION))'
+      condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
+      inputs:
+        command: pack
+        packagesToPack: '$(MAIN_PROJECT_PATH)/*.csproj'
+        configuration: '$(BUILD_CONFIGURATION)'
+        versioningScheme: byBuildNumber
+        packDirectory: $(Build.ArtifactStagingDirectory)/nuget
+    - script: ls $(Build.ArtifactStagingDirectory)/nuget
+      condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')  
+      displayName: 'Display contents of nuget path'
+    - script: dotnet nuget push --source https://nuget.pkg.github.com/eduardosbcabral/index.json --api-key $(GITHUT_PUBLISH_PACKAGES_PAT) '$(Build.ArtifactStagingDirectory)/nuget/*.nupkg'
+      condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
+      displayName: 'Publish Package to Github Registry'
+    - task: NuGetCommand@2
+      displayName: 'Publish Package to nuget.org'
+      condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
+      inputs:
+        command: 'push'
+        packagesToPush: '$(Build.ArtifactStagingDirectory)/nuget/*.nupkg'
+        nuGetFeedType: 'external'
+        publishFeedCredentials: 'nuget_org_publish_packages'
