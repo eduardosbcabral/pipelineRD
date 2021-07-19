@@ -1,0 +1,92 @@
+# ASP.NET Core
+# Build and test ASP.NET Core projects targeting .NET Core.
+# Add steps that run tests, create a NuGet package, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
+variables:
+- group: 'Credentials'
+- name: SOLUTION_PATH
+  value: src/
+- name: MAIN_PROJECT_PATH
+  value: src/PipelineRD
+- name: TEST_PROJECT_PATH
+  value: src/PipelineRD.Tests
+- name: BUILD_CONFIGURATION
+  value: 'Release'
+
+trigger:
+  branches:
+    include:
+    - release/*  
+    - hotfix/*
+  tags:
+    include:
+    - '*'
+
+pr:
+  branches:
+    include:
+    - develop
+    - master
+
+# trigger:
+#   branches:
+#     include:
+#     - main
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+- stage: 'Build_Application'
+  displayName: 'Build Application'
+  jobs:
+  - job: 'Build_Solution'
+    displayName: 'Build Solution'
+    steps:
+    - task: DotNetCoreCLI@2
+      displayName: 'Restore Solution'
+      inputs:
+        command: 'restore'
+        projects: '$(SOLUTION_PATH)/**/*.csproj'
+    - task: DotNetCoreCLI@2
+      displayName: 'Build Solution'
+      inputs:
+        command: 'build'
+        arguments: '$(SOLUTION_PATH) --configuration $(BUILD_CONFIGURATION) --no-restore'
+    - task: DotNetCoreCLI@2
+      displayName: 'Run Unit Tests'
+      inputs:
+        command: test
+        projects: '$(TEST_PROJECT_PATH)/*.csproj'
+        arguments: '--configuration $(BUILD_CONFIGURATION) --no-restore --no-build --collect:"XPlat Code Coverage" -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura'
+        publishTestResults: true
+    - task: PublishCodeCoverageResults@1
+      displayName: 'Publish code coverage report'
+      inputs:
+        codeCoverageTool: 'Cobertura'
+        summaryFileLocation: '$(Agent.TempDirectory)/*/coverage.cobertura.xml'
+        failIfCoverageEmpty: true
+    - task: DotNetCoreCLI@2
+      displayName: 'Pack Nuget Package ($(BUILD_CONFIGURATION))'
+      condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
+      inputs:
+        command: pack
+        packagesToPack: '$(MAIN_PROJECT_PATH)/*.csproj'
+        configuration: '$(BUILD_CONFIGURATION)'
+        versioningScheme: off
+        packDirectory: $(Build.ArtifactStagingDirectory)/nuget
+    - script: ls $(Build.ArtifactStagingDirectory)/nuget
+      condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')  
+      displayName: 'Display contents of nuget path'
+    - script: dotnet nuget push --source https://nuget.pkg.github.com/eduardosbcabral/index.json --api-key $(GITHUT_PUBLISH_PACKAGES_PAT) '$(Build.ArtifactStagingDirectory)/nuget/*.nupkg'
+      condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
+      displayName: 'Publish Package to Github Registry'
+    - task: NuGetCommand@2
+      displayName: 'Publish Package to nuget.org'
+      condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
+      inputs:
+        command: 'push'
+        packagesToPush: '$(Build.ArtifactStagingDirectory)/nuget/*.nupkg'
+        nuGetFeedType: 'external'
+        publishFeedCredentials: 'nuget_org_publish_packages'
