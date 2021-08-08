@@ -1,7 +1,5 @@
-﻿using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 
-using PipelineRD.Diagrams;
 using PipelineRD.Extensions;
 using PipelineRD.Settings;
 using PipelineRD.Tests.Conditions;
