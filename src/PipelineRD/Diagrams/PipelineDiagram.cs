@@ -89,6 +89,18 @@ namespace PipelineRD.Diagrams
             return this;
         }
 
+        public IPipeline<TContext> AddNext<TRequestStep>(IStep<TContext> requestStep) where TRequestStep : IStep<TContext>
+        {
+            if (requestStep == null)
+            {
+                throw new NullReferenceException("[PipelineDiagram] Request step cannot be null.");
+            }
+
+            var node = new Node(requestStep.GetType().Name);
+            AddNodeR(node, ENodeType.Next);
+            return this;
+        }
+
         public IPipeline<TContext> AddValidator<TRequest>(IValidator<TRequest> validator) where TRequest : IPipelineRequest
         {
             var node = new Node("Validate request");

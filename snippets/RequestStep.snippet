@@ -1,0 +1,42 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>RequestStep</Title>
+      <Author>Eduardo Cabral</Author>
+      <Description>A basic request step from PipelineRD.</Description>
+      <Shortcut>rstep</Shortcut>
+    </Header>
+    <Snippet>
+      <Code Language="Csharp">
+          <![CDATA[public class $StepName$Step : RequestStep<$ContextName$>, I$StepName$Step
+        {
+            public override RequestStepResult HandleRequest()
+            {
+                return Next();
+            }
+        }
+        
+        public interface I$StepName$Step : IRequestStep<$ContextName$>
+        { }$end$]]>
+      </Code>
+      <Imports>
+        <Import>
+          <Namespace>PipelineRD</Namespace>
+        </Import>
+      </Imports>
+      <Declarations>
+        <Literal>
+          <ID>StepName</ID>
+          <ToolTip>Choose the request step name.</ToolTip>
+          <Default>Custom</Default>
+        </Literal>
+        <Literal>
+          <ID>ContextName</ID>
+          <ToolTip>Choose the context name.</ToolTip>
+          <Default>Context</Default>
+        </Literal>
+      </Declarations>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

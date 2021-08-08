@@ -91,6 +91,27 @@ namespace PipelineRD
 
             return this;
         }
+
+        public IPipeline<TContext> AddNext<TRequestStep>(IStep<TContext> requestStep) where TRequestStep : IStep<TContext>
+        {
+            if (requestStep == null)
+            {
+                throw new NullReferenceException("Request step cannot be null.");
+            }
+
+            if (_finallyStepIsSet)
+            {
+                throw new PipelineException("Finally request step is already set. Cannot add a new step.");
+            }
+
+            requestStep.SetPipeline(this);
+
+            _requestSteps.Enqueue(requestStep);
+
+            SetCurrentRequestStepIdentifier(requestStep);
+
+            return this;
+        }
         #endregion
 
         #region AddValidator

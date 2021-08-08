@@ -1,5 +1,9 @@
 # PipelineRD
 
+[![Build Status](https://dev.azure.com/eduardosbcabral/PipelineRD/_apis/build/status/eduardosbcabral.pipelineRD?branchName=main)](https://dev.azure.com/eduardosbcabral/PipelineRD/_build/latest?definitionId=1&branchName=main)
+[![NuGet](https://img.shields.io/nuget/dt/pipelineRD.svg)](https://www.nuget.org/packages/PipelineRD) 
+[![NuGet](https://img.shields.io/nuget/vpre/PipelineRD.svg)](https://www.nuget.org/packages/PipelineRD)
+
 A chain of responsability pattern implementation in .NET
 
 Supports retry policy, sync and async steps, rollback, pipeline recovery by cache and visual documentation using diagrams.
