@@ -1,6 +1,4 @@
-﻿using Polly;
-
-using System;
+﻿using System;
 using System.Linq.Expressions;
 
 namespace PipelineRD
@@ -9,9 +7,9 @@ namespace PipelineRD
     {
         string Identifier { get; }
         TPipelineContext Context { get; }
-        Expression<Func<TPipelineContext, bool>> ConditionToExecute { get; set; }
-        void SetPipeline(IPipeline<TPipelineContext> pipeline);
         TRequest Request<TRequest>() where TRequest : IPipelineRequest;
+        Expression<Func<TPipelineContext, bool>> ConditionToExecute { get; set; }
+        void SetPipeline(Pipeline<TPipelineContext> pipeline);
         void AddRollbackIndex(int index);
         int? RollbackIndex { get; }
     }

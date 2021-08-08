@@ -1,7 +1,5 @@
 ﻿using FluentValidation;
 
-using PipelineRD.Async;
-
 using Polly;
 
 using System;
@@ -27,12 +25,11 @@ namespace PipelineRD
         #region Execute
         Task<RequestStepResult> Execute<TRequest>(TRequest request) where TRequest : IPipelineRequest;
         Task<RequestStepResult> Execute<TRequest>(TRequest request, string idempotencyKey) where TRequest : IPipelineRequest;
-        Task<RequestStepResult> ExecuteFromSpecificRequestStep(string requestStepIdentifier);
-        Task<RequestStepResult> ExecuteNextRequestStep();
         #endregion
 
         #region AddNext
         IPipeline<TContext> AddNext<TRequestStep>() where TRequestStep : IStep<TContext>;
+        IPipeline<TContext> AddNext<TRequestStep>(IStep<TContext> step) where TRequestStep : IStep<TContext>;
         #endregion
 
         #region AddValidator
@@ -59,6 +56,11 @@ namespace PipelineRD
         IPipeline<TContext> AddFinally<TRequestStep>() where TRequestStep : IStep<TContext>;
         #endregion
 
-       Task ExecuteRollback();
+
+
+
+        //Task<RequestStepResult> ExecuteFromSpecificRequestStep(string requestStepIdentifier);
+        //Task<RequestStepResult> ExecuteNextRequestStep();
+        //Task ExecuteRollback();
     }
 }

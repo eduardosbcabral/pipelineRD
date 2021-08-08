@@ -14,7 +14,7 @@ namespace PipelineRD
         public Expression<Func<TContext, bool>> ConditionToExecute { get; set; }
         public int? RollbackIndex { get; private set; }
 
-        private IPipeline<TContext> _pipeline;
+        private Pipeline<TContext> _pipeline;
         private IPipelineRequest _request;
 
         private const int DEFAULT_FAILURE_STATUS_CODE = 400;
@@ -32,7 +32,7 @@ namespace PipelineRD
         public TRequest Request<TRequest>() where TRequest : IPipelineRequest
             => (TRequest)(Context.Request ?? _request);
 
-        public void SetPipeline(IPipeline<TContext> pipeline) => _pipeline = pipeline;
+        public void SetPipeline(Pipeline<TContext> pipeline) => _pipeline = pipeline;
 
         public void SetRequest(IPipelineRequest request) => _request = request;
 
@@ -143,7 +143,7 @@ namespace PipelineRD
 
         private RequestStepResult Rollback(RequestStepResult result)
         {
-            _pipeline.ExecuteRollback();
+            Task.Run(() => _pipeline.ExecuteRollback()).GetAwaiter().GetResult();
             return result;
         }
         #endregion

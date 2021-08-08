@@ -4,8 +4,6 @@ using PipelineRD.Builders;
 
 using System;
 
-using static FluentValidation.AssemblyScanner;
-
 namespace PipelineRD.Extensions
 {
     public static class PipelineExtensions
