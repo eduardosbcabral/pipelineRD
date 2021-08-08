@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace PipelineRD.Tests.Steps
+﻿namespace PipelineRD.Tests.Steps
 {
     public class RollbackSampleStep : RequestStep<ContextSample>, IRollbackSampleStep
     {

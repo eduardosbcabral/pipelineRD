@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>RollbackRequestStep</Title>
+      <Author>Eduardo Cabral</Author>
+      <Description>A basic rollback request step from PipelineRD.</Description>
+      <Shortcut>rbstep</Shortcut>
+    </Header>
+    <Snippet>
+      <Code Language="Csharp">
+          <![CDATA[public class $StepName$RollbackStep : RollbackRequestStep<$ContextName$>, I$StepName$RollbackStep
+        {
+            public override void HandleRequest()
+            {
+            }
+        }
+        
+        public interface I$StepName$RollbackStep : IRollbackRequestStep<$ContextName$>
+        { }$end$]]>
+      </Code>
+      <Imports>
+        <Import>
+          <Namespace>PipelineRD</Namespace>
+        </Import>
+      </Imports>
+      <Declarations>
+        <Literal>
+          <ID>StepName</ID>
+          <ToolTip>Choose the rollback request step name.</ToolTip>
+          <Default>Custom</Default>
+        </Literal>
+        <Literal>
+          <ID>ContextName</ID>
+          <ToolTip>Choose the context name.</ToolTip>
+          <Default>Context</Default>
+        </Literal>
+      </Declarations>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>
