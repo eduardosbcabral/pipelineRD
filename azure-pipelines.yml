@@ -71,6 +71,8 @@ stages:
     #   condition: contains(variables['Build.SourceBranch'], '/tags/')
     #   displayName: 'Break if release branch is not passing'
     #   name: BreakIsReleaseNotPassing
+    - bash: env
+      displayName: Show environment variables
   - job: 'Build'
     displayName: 'Build'
     dependsOn: 'UpdateBuildVersion'
