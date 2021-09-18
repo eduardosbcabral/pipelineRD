@@ -1,6 +1,4 @@
-﻿using FluentValidation;
-
-using Polly;
+﻿using Polly;
 
 using System;
 using System.Collections.Generic;
@@ -16,6 +14,7 @@ namespace PipelineRD
         string Identifier { get; }
         IReadOnlyCollection<IStep<TContext>> Steps { get; }
         void SetRequestKey(string requestKey);
+        IServiceProvider GetServiceProvider();
 
         #region RecoveryHash
         IPipeline<TContext> EnableRecoveryRequestByHash();
@@ -30,11 +29,6 @@ namespace PipelineRD
         #region AddNext
         IPipeline<TContext> AddNext<TRequestStep>() where TRequestStep : IStep<TContext>;
         IPipeline<TContext> AddNext<TRequestStep>(IStep<TContext> step) where TRequestStep : IStep<TContext>;
-        #endregion
-
-        #region AddValidator
-        IPipeline<TContext> AddValidator<TRequest>(IValidator<TRequest> validator) where TRequest : IPipelineRequest;
-        IPipeline<TContext> AddValidator<TRequest>() where TRequest : IPipelineRequest;
         #endregion
 
         #region AddPolicy
@@ -55,12 +49,5 @@ namespace PipelineRD
         #region AddFinally
         IPipeline<TContext> AddFinally<TRequestStep>() where TRequestStep : IStep<TContext>;
         #endregion
-
-
-
-
-        //Task<RequestStepResult> ExecuteFromSpecificRequestStep(string requestStepIdentifier);
-        //Task<RequestStepResult> ExecuteNextRequestStep();
-        //Task ExecuteRollback();
     }
 }

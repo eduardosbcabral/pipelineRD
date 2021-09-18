@@ -12,7 +12,6 @@
 
   <ItemGroup>
     <PackageReference Include="DiagramBuilder" Version="1.0.0" />
-    <PackageReference Include="FluentValidation" Version="10.3.0" />
     <PackageReference Include="JsonNet.ContractResolvers" Version="2.0.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="5.0.0" />
