@@ -30,7 +30,7 @@ namespace PipelineRD.Async
         #region Methods
 
         public TRequest Request<TRequest>() where TRequest : IPipelineRequest
-            => (TRequest)(Context.Request ?? _request);
+            => Context.Request<TRequest>();
 
         public void SetPipeline(Pipeline<TContext> pipeline) => _pipeline = pipeline;
 

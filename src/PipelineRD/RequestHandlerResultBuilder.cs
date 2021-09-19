@@ -4,7 +4,7 @@ using WebApi.Models.Response;
 
 namespace PipelineRD
 {
-    internal class RequestStepHandlerResultBuilder
+    public class RequestStepHandlerResultBuilder
     {
         private RequestStepResult Handler;
 

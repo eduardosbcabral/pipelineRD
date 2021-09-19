@@ -1,6 +1,4 @@
-﻿using FluentValidation;
-
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 
 using PipelineRD.Async;
 
@@ -11,29 +9,28 @@ using System.Reflection;
 
 namespace PipelineRD.Builders
 {
-    class PipelineServicesBuilder : IPipelineServicesBuilder
+    public class PipelineServicesBuilder : IPipelineServicesBuilder
     {
-        private readonly IEnumerable<TypeInfo> _types;
-        private readonly IServiceCollection _services;
+        public IEnumerable<TypeInfo> Types { get; private set; }
+        public IServiceCollection Services { get; private set; }
+        public bool ValidatorsAlreadySet { get; set; }
 
         private bool _contextsAlreadySet;
         private bool _stepsAlreadySet;
         private bool _pipelinesAlreadySet;
-        private bool _validatorsAlreadySet;
         private bool _initializersAlreadySet;
         private bool _buildersAlreadySet;
 
         public PipelineServicesBuilder(IEnumerable<TypeInfo> types, IServiceCollection services)
         {
-            _types = types;
-            _services = services;
+            Types = types;
+            Services = services;
         }
 
         public void InjectAll()
         {
             InjectContexts();
             InjectSteps();
-            InjectRequestValidators();
             InjectPipelineBuilders();
             InjectPipelineInitializers();
             InjectPipelines();
@@ -43,7 +40,7 @@ namespace PipelineRD.Builders
         {
             if (_contextsAlreadySet) return;
 
-            var contexts = _types.Where(a => a.IsClass && a.BaseType == typeof(BaseContext));
+            var contexts = Types.Where(a => a.IsClass && a.BaseType == typeof(BaseContext));
 
             var duplicatedContexts = contexts.GroupBy(x => x.Name)
                 .Where(x => x.Count() > 1)
@@ -55,7 +52,7 @@ namespace PipelineRD.Builders
             }
 
             foreach (var context in contexts)
-                _services.AddScoped(context.AsType());
+                Services.AddScoped(context.AsType());
 
             _contextsAlreadySet = true;
         }
@@ -66,7 +63,7 @@ namespace PipelineRD.Builders
 
             var searchClasses = new Type[] { typeof(RequestStep<>), typeof(RollbackRequestStep<>), typeof(AsyncRequestStep<>) };
 
-            var steps = _types
+            var steps = Types
                 .Where(x => !x.IsAbstract && x.IsClass && searchClasses.Any(t => IsSubclassOfGeneric(x, t)))
                 .Select(x => new
                 {
@@ -76,7 +73,7 @@ namespace PipelineRD.Builders
 
             foreach (var step in steps)
             {
-                _services.AddScoped(step.Interface, step.Type);
+                Services.AddScoped(step.Interface, step.Type);
             }
 
             _stepsAlreadySet = true;
@@ -86,34 +83,14 @@ namespace PipelineRD.Builders
         {
             if (_pipelinesAlreadySet) return;
 
-            _services.AddScoped(typeof(IPipeline<>), typeof(Pipeline<>));
+            Services.AddScoped(typeof(IPipeline<>), typeof(Pipeline<>));
             _pipelinesAlreadySet = true;
-        }
-
-        public void InjectRequestValidators()
-        {
-            if (_validatorsAlreadySet) return;
-
-            var validators = from type in _types
-                             where !type.IsAbstract && !type.IsGenericTypeDefinition
-                             let interfaces = type.GetInterfaces()
-                             let genericInterfaces = interfaces.Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IValidator<>))
-                             let matchingInterface = genericInterfaces.FirstOrDefault()
-                             where matchingInterface != null
-                             select new { Interface = matchingInterface, Type = type };
-
-            foreach (var validator in validators)
-            {
-                _services.AddSingleton(validator.Interface, validator.Type);
-            }
-
-            _validatorsAlreadySet = true;
         }
 
         public void InjectPipelineInitializers()
         {
             if (_initializersAlreadySet) return;
-            _services.AddScoped(typeof(IPipelineInitializer<>), typeof(PipelineInitializer<>));
+            Services.AddScoped(typeof(IPipelineInitializer<>), typeof(PipelineInitializer<>));
             _initializersAlreadySet = true;
         }
 
@@ -121,7 +98,7 @@ namespace PipelineRD.Builders
         {
             if (_buildersAlreadySet) return;
 
-            var pipelineBuilders = from type in _types
+            var pipelineBuilders = from type in Types
                                    where !type.IsAbstract && !type.IsGenericTypeDefinition
                                    let interfaces = type.GetInterfaces()
                                    let genericInterfaces = interfaces.Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IPipelineBuilder<>))
@@ -130,7 +107,7 @@ namespace PipelineRD.Builders
                                    select new { Interface = matchingInterface, Type = type };
 
             foreach (var builder in pipelineBuilders)
-                _services.AddScoped(builder.Interface, builder.Type);
+                Services.AddScoped(builder.Interface, builder.Type);
 
             _buildersAlreadySet = true;
         }

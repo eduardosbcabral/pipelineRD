@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 
 using PipelineRD.Extensions;
 using PipelineRD.Settings;
+using PipelineRD.Validation;
 
 using System.IO;
 
@@ -33,9 +34,9 @@ namespace PipelineRD.Sample
                     x.InjectContexts();
                     x.InjectSteps();
                     x.InjectPipelines();
-                    x.InjectRequestValidators();
                     x.InjectPipelineInitializers();
                     x.InjectPipelineBuilders();
+                    x.InjectRequestValidators();
                 });
                 // localhost:{PORT}/docs
                 x.UseDocumentation(x =>

@@ -1,6 +1,4 @@
-﻿using FluentValidation;
-
-using Microsoft.Extensions.Caching.StackExchangeRedis;
+﻿using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyModel;
 
