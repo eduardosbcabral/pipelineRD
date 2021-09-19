@@ -2,8 +2,6 @@
 
 using Microsoft.Extensions.DependencyInjection;
 
-using FluentValidation;
-
 using Polly;
 
 using System;
@@ -24,6 +22,8 @@ namespace PipelineRD.Diagrams
         public string CurrentRequestStepIdentifier => throw new NotImplementedException();
 
         public IReadOnlyCollection<IStep<TContext>> Steps => throw new NotImplementedException();
+
+        public IServiceProvider GetServiceProvider() => _serviceProvider;
 
         private readonly DocumentationBuilder _builder;
         private readonly Flowchart _flowchart;
@@ -100,16 +100,6 @@ namespace PipelineRD.Diagrams
             AddNodeR(node, ENodeType.Next);
             return this;
         }
-
-        public IPipeline<TContext> AddValidator<TRequest>(IValidator<TRequest> validator) where TRequest : IPipelineRequest
-        {
-            var node = new Node("Validate request");
-            AddNodeR(node, ENodeType.Next);
-            return this;
-        }
-
-        public IPipeline<TContext> AddValidator<TRequest>() where TRequest : IPipelineRequest
-            => AddValidator<TRequest>(null);
 
         public IPipeline<TContext> WithPolicy(Policy<RequestStepResult> policy)
         {

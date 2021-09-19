@@ -2,10 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Net;
 using System.Threading.Tasks;
-
-using FluentValidation;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -29,7 +26,6 @@ namespace PipelineRD
 
         protected readonly IServiceProvider _serviceProvider;
         protected readonly ICacheProvider _cacheProvider;
-        protected IValidator _validator;
         protected string _requestKey;
         protected bool _useReuseRequisitionHash;
         protected bool _finallyStepIsSet = false;
@@ -53,6 +49,7 @@ namespace PipelineRD
         }
         #endregion
 
+        public IServiceProvider GetServiceProvider() => _serviceProvider;
         public void SetRequestKey(string requestKey) => _requestKey = requestKey;
 
         #region RecoveryRequestByHash
@@ -111,20 +108,6 @@ namespace PipelineRD
             SetCurrentRequestStepIdentifier(requestStep);
 
             return this;
-        }
-        #endregion
-
-        #region AddValidator
-        public virtual IPipeline<TContext> AddValidator<TRequest>(IValidator<TRequest> validator) where TRequest : IPipelineRequest
-        {
-            _validator = validator;
-            return this;
-        }
-
-        public virtual IPipeline<TContext> AddValidator<TRequest>() where TRequest : IPipelineRequest
-        {
-            var validator = _serviceProvider.GetService<IValidator<TRequest>>();
-            return AddValidator(validator);
         }
         #endregion
 
@@ -249,36 +232,13 @@ namespace PipelineRD
 
             SetCurrentRequestStepIdentifier(headStep);
 
-            if (_validator != null)
-            {
-                var validationContext = new ValidationContext<TRequest>(request);
-                var validateResult = _validator.Validate(validationContext);
-
-                if (!validateResult.IsValid)
-                {
-                    var errors = validateResult.Errors
-                        .Select(p => RequestErrorBuilder.Instance()
-                            .WithMessage(p.ErrorMessage)
-                            .WithProperty(p.PropertyName)
-                            .Build())
-                        .ToArray();
-
-                    return RequestStepHandlerResultBuilder.Instance()
-                        .WithErrors(errors)
-                        .WithHttpStatusCode(HttpStatusCode.BadRequest)
-                        .Build();
-                }
-            }
-
             var hash = string.IsNullOrEmpty(idempotencyKey) ?
                     request.GenerateHash(Identifier) :
                     idempotencyKey;
             var firstStepIdentifier = string.Empty;
 
-            // Quando pedir para executar, verificar se estamos utilizando o recovery
             if (_useReuseRequisitionHash)
             {
-                // Se existir um snapshot com o hash, irá voltar para a step na pipeline de onde parou a última execução falha.
                 var snapshot = _cacheProvider.Get<PipelineSnapshot>(hash).Result;
                 if (snapshot != null)
                 {
@@ -295,7 +255,7 @@ namespace PipelineRD
             }
 
             // Set the Request in the shared Context
-            Context.Request = request;
+            Context.SetRequest(request);
 
             var pipelineResult = await ExecutePipeline(firstStepIdentifier);
 

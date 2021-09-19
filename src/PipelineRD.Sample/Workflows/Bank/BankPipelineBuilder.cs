@@ -1,6 +1,7 @@
 ﻿using PipelineRD.Sample.Models;
 using PipelineRD.Sample.Workflows.Bank.AccountSteps;
 using PipelineRD.Sample.Workflows.Bank.SharedSteps;
+using PipelineRD.Validation;
 
 using Polly;
 
@@ -32,7 +33,7 @@ namespace PipelineRD.Sample.Workflows.Bank
                 .AddNext<ICreateAccountStep>()
                     .AddRollback<ICreateAccountRollbackStep>()
                 .AddNext<IFinishAccountStep>()
-                .Execute(model);
+                .ExecuteWithValidation(model);
         }
 
         public async Task<RequestStepResult> DepositAccount(DepositAccountModel model)
@@ -44,7 +45,7 @@ namespace PipelineRD.Sample.Workflows.Bank
                 .AddNext<IDepositAccountStep>()
                     .When(b => b.Id == "test")
                 .AddNext<IFinishAccountStep>()
-                .Execute(model);
+                .ExecuteWithValidation(model);
         }
     }
 

@@ -9,6 +9,12 @@ variables:
 - name: BUILD_CONFIGURATION
   value: 'Release'
 
+parameters:
+  - name: STAGING_TAG
+    type: string
+    default: ' ' # Empty space because the azure does not let us have a optional parameter for now. The code will handle this value if you deploy with an empty space.
+    displayName: 'Tag to publish the package in development. Caution: check if the inserted tag is one (major/minor/patch) version higher than the latest tag in master.'
+
 trigger:
   branches:
     include:
@@ -23,11 +29,6 @@ pr:
     include:
     - develop
     - master
-
-# trigger:
-#   branches:
-#     include:
-#     - main
 
 pool:
   vmImage: ubuntu-latest
@@ -44,11 +45,40 @@ stages:
     # It will update the pipeline build version based on the reason of the trigger.
     # If it is a tag trigger, it will set the build version as the git tag version.
     - bash: |
-        if [[ "$(Build.SourceBranch)" =~ "/tags/" ]];
+        if [[ "$(Build.SourceBranch)" =~ "/feature/" ]] ||
+           [[ "$(Build.SourceBranch)" =~ "/bugfix/" ]]; 
         then
+          echo "Generate Development Version"
+
+          staging_tag=`echo "${{ parameters.STAGING_TAG }}" | xargs`
+
+          if [[ -z "$staging_tag" ]]
+          then
+            version=`echo "$BUILD_SOURCEVERSIONMESSAGE" | grep -oP '[\[]staging v?\d+.\d+.\d+[\]]' | grep -oP '\d+.\d+.\d+'`
+          else
+            version=`echo "$staging_tag" | grep -oP '\d+.\d+.\d+'`
+          fi
+
+          if [[ -z "$version" ]];
+          then
+              echo "Version: $(Build.BuildNumber)"
+              echo "##vso[task.setvariable variable=PackingNuget;isOutput=true]false"
+          else
+              echo "Version: $version-alpha.$(Build.BuildNumber)"
+              echo "Force alpha development enabled!"
+              echo "##vso[task.setvariable variable=PackingNuget;isOutput=true]true"
+              echo "##vso[task.setvariable variable=PackageVersion;isOutput=true]$version-alpha.$(Build.BuildNumber)"
+              echo "##vso[build.updatebuildnumber]$version-alpha.$(Build.BuildNumber)"
+          fi
+        elif [[ "$(Build.SourceBranch)" =~ "/tags/" ]];
+        then
+          version=`sed 's/v//g' <<< $BUILD_SOURCEBRANCHNAME`
           echo "Generate Release Version"
           echo "Version: $(Build.SourceBranchName)"
-          echo "##vso[build.updatebuildnumber]$(Build.SourceBranchName)"
+          echo "##vso[task.setvariable variable=PackingNuget;isOutput=true]true"
+          echo "##vso[task.setvariable variable=PackageVersion;isOutput=true]$version"
+          echo "##vso[task.setvariable variable=IsRelease;isOutput=true]true"
+          echo "##vso[build.updatebuildnumber]$version"
         fi
       displayName: Update Version Number
       name: UpdateBuildVersionNumberTask
@@ -71,10 +101,16 @@ stages:
     #   condition: contains(variables['Build.SourceBranch'], '/tags/')
     #   displayName: 'Break if release branch is not passing'
     #   name: BreakIsReleaseNotPassing
+    - bash: env
+      displayName: Show environment variables
   - job: 'Build'
     displayName: 'Build'
     dependsOn: 'UpdateBuildVersion'
     condition: eq(dependencies.UpdateBuildVersion.result, 'Succeeded')
+    variables:
+      PackingNuget: $[ dependencies.UpdateBuildVersion.outputs['UpdateBuildVersionNumberTask.PackingNuget'] ]
+      PackageVersion: $[ dependencies.UpdateBuildVersion.outputs['UpdateBuildVersionNumberTask.PackageVersion'] ]
+      IsRelease: $[ dependencies.UpdateBuildVersion.outputs['UpdateBuildVersionNumberTask.IsRelease'] ]
     steps:
     - task: DotNetCoreCLI@2
       displayName: 'Restore Solution'
@@ -100,23 +136,22 @@ stages:
         summaryFileLocation: '$(Agent.TempDirectory)/*/coverage.cobertura.xml'
         failIfCoverageEmpty: true
     - task: DotNetCoreCLI@2
+      condition: eq(variables['PackingNuget'], 'true')
       displayName: 'Pack Nuget Package ($(BUILD_CONFIGURATION))'
-      condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
       inputs:
-        command: pack
-        packagesToPack: '$(MAIN_PROJECT_PATH)/*.csproj'
-        configuration: '$(BUILD_CONFIGURATION)'
-        versioningScheme: byBuildNumber
-        packDirectory: $(Build.ArtifactStagingDirectory)/nuget
+        command: 'custom'
+        projects: '$(MAIN_PROJECT_PATH)/*.csproj'
+        custom: 'pack'
+        arguments: '-p:Configuration=$(BUILD_CONFIGURATION) -p:PackageVersion=$(PackageVersion) -p:Version=$(PackageVersion) --output $(Build.ArtifactStagingDirectory)/nuget'
     - script: ls $(Build.ArtifactStagingDirectory)/nuget
-      condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')  
+      condition: eq(variables['PackingNuget'], 'true')
       displayName: 'Display contents of nuget path'
     - script: dotnet nuget push --source https://nuget.pkg.github.com/eduardosbcabral/index.json --api-key $(GITHUT_PUBLISH_PACKAGES_PAT) '$(Build.ArtifactStagingDirectory)/nuget/*.nupkg'
-      condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
+      condition: eq(variables['IsRelease'], 'true')
       displayName: 'Publish Package to Github Registry'
     - task: NuGetCommand@2
       displayName: 'Publish Package to nuget.org'
-      condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
+      condition: eq(variables['PackingNuget'], 'true')
       inputs:
         command: 'push'
         packagesToPush: '$(Build.ArtifactStagingDirectory)/nuget/*.nupkg'

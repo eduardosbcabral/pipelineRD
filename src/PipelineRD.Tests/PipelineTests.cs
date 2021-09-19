@@ -8,7 +8,6 @@ using System;
 using Xunit;
 using PipelineRD.Tests.Conditions;
 using PipelineRD.Extensions;
-using PipelineRD.Tests.Validators;
 using System.Linq;
 using Polly;
 using System.Net;
@@ -48,39 +47,6 @@ namespace PipelineRD.Tests
             var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
             pipeline.AddFinally<IFirstSampleStep>();
             Assert.Throws<PipelineException>(() => pipeline.AddNext<ISecondSampleStep>());
-        }
-
-        [Fact]
-        public async Task Should_Pipeline_Validate_Request()
-        {
-            var request = new SampleRequest() { ValidModel = false };
-            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
-            pipeline.AddValidator<SampleRequest>();
-            pipeline.AddNext<IFirstSampleStep>();
-            pipeline.AddNext<ISecondSampleStep>();
-            pipeline.AddNext<IThirdSampleStep>();
-
-            var result = await pipeline.Execute(request);
-
-            Assert.Equal(400, result.StatusCode);
-            Assert.Single(result.Errors);
-        }
-
-        [Fact]
-        public async Task Should_Pipeline_Validate_Request_Using_Validator_Implementation()
-        {
-            var request = new SampleRequest() { ValidModel = false };
-            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
-            var validator = new SampleRequestValidator();
-            pipeline.AddValidator(validator);
-            pipeline.AddNext<IFirstSampleStep>();
-            pipeline.AddNext<ISecondSampleStep>();
-            pipeline.AddNext<IThirdSampleStep>();
-
-            var result = await pipeline.Execute(request);
-
-            Assert.Equal(400, result.StatusCode);
-            Assert.Single(result.Errors);
         }
 
         [Fact]

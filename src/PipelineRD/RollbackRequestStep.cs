@@ -19,7 +19,7 @@ namespace PipelineRD
 
         #region Methods
         public TRequest Request<TRequest>() where TRequest : IPipelineRequest
-            => (TRequest)(Context.Request ?? _request);
+            => Context.Request<TRequest>();
 
         public void SetPipeline(IPipeline<TContext> pipeline) => _pipeline = pipeline;
 

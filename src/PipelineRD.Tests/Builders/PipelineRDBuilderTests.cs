@@ -70,14 +70,12 @@ namespace PipelineRD.Tests.Builders
             var step = provider.GetService<IPipelineRDTestStep>();
             var rollbackStep = provider.GetService<IPipelineRDTestRollbackStep>();
             var pipeline = provider.GetService<IPipeline<PipelineRDContextTest>>();
-            var validator = provider.GetService<IValidator<PipelineRDRequestTest>>();
             var initializer = provider.GetService<IPipelineInitializer<PipelineRDContextTest>>();
             var builder = provider.GetService<IPipelineBuilder<PipelineRDContextTest>>();
             Assert.NotNull(context);
             Assert.NotNull(step);
             Assert.NotNull(rollbackStep);
             Assert.NotNull(pipeline);
-            Assert.NotNull(validator);
             Assert.NotNull(initializer);
             Assert.NotNull(builder);
         }
@@ -137,25 +135,6 @@ namespace PipelineRD.Tests.Builders
 
             Assert.NotNull(service);
             Assert.Equal(ServiceLifetime.Scoped, service.Lifetime);
-        }
-
-        [Fact]
-        public void Should_UsePipelineRD_AddPipelineServices_And_Check_If_IValidatorRequest_Is_Singleton()
-        {
-            var services = new ServiceCollection();
-
-            services.UsePipelineRD(x =>
-            {
-                x.UseCacheInMemory(new MemoryCacheSettings());
-                x.AddPipelineServices(x => x.InjectRequestValidators());
-            });
-
-            var provider = services.BuildServiceProvider();
-
-            var service = services.FirstOrDefault(x => x.ServiceType == typeof(IValidator<PipelineRDRequestTest>));
-
-            Assert.NotNull(service);
-            Assert.Equal(ServiceLifetime.Singleton, service.Lifetime);
         }
 
         [Fact]
