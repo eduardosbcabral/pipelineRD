@@ -1,7 +1,6 @@
 ﻿using PipelineRD.Sample.Models;
 using PipelineRD.Sample.Workflows.Bank.AccountSteps;
 using PipelineRD.Sample.Workflows.Bank.SharedSteps;
-using PipelineRD.Validation;
 
 using Polly;
 
@@ -25,15 +24,8 @@ namespace PipelineRD.Sample.Workflows.Bank
             return await Pipeline
                 .Initialize(requestKey)
                 .EnableRecoveryRequestByHash()
-                .AddNext<ISearchAccountStep>()
-                    .When(b => b.Id == "bla")
-                .AddNext<IDepositAccountStep>()
-                    .AddRollback<IDepositAccountRollbackStep>()
-                    .WithPolicy(Policy.HandleResult<RequestStepResult>(x => !x.Success).Retry(3))
-                .AddNext<ICreateAccountStep>()
-                    .AddRollback<ICreateAccountRollbackStep>()
-                .AddNext<IFinishAccountStep>()
-                .ExecuteWithValidation(model);
+                .AddNext<IAsyncFinishAccountStep>()
+                .Execute(model);
         }
 
         public async Task<RequestStepResult> DepositAccount(DepositAccountModel model)
@@ -45,7 +37,7 @@ namespace PipelineRD.Sample.Workflows.Bank
                 .AddNext<IDepositAccountStep>()
                     .When(b => b.Id == "test")
                 .AddNext<IFinishAccountStep>()
-                .ExecuteWithValidation(model);
+                .Execute(model);
         }
     }
 
