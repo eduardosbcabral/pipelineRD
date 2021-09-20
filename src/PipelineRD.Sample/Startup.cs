@@ -6,7 +6,6 @@ using Microsoft.Extensions.Hosting;
 
 using PipelineRD.Extensions;
 using PipelineRD.Settings;
-using PipelineRD.Validation;
 
 using System.IO;
 
@@ -28,7 +27,12 @@ namespace PipelineRD.Sample
         {
             services.UsePipelineRD(x =>
             {
-                x.UseCacheInMemory(new MemoryCacheSettings());
+                x.UseCacheInRedis(new RedisCacheSettings()
+                {
+                    ConnectionString = "sandbox-slug.redis.cache.windows.net:6380,ssl=true,password=hjFwEjYaVd4UQJNyFDIEykss4xuopNLIR3IdOc4Jezw=,defaultDatabase=11",
+                    TTLInMinutes = 1,
+                    KeyPreffix = "pipelineRD"
+                });
                 x.AddPipelineServices(x =>
                 {
                     x.InjectContexts();
@@ -36,8 +40,8 @@ namespace PipelineRD.Sample
                     x.InjectPipelines();
                     x.InjectPipelineInitializers();
                     x.InjectPipelineBuilders();
-                    x.InjectRequestValidators();
                 });
+
                 // localhost:{PORT}/docs
                 x.UseDocumentation(x =>
                 {
