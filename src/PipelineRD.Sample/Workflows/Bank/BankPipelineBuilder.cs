@@ -24,7 +24,7 @@ namespace PipelineRD.Sample.Workflows.Bank
             return await Pipeline
                 .Initialize(requestKey)
                 .EnableRecoveryRequestByHash()
-                .AddNext<IFinishAccountStep>()
+                .AddNext<IAsyncFinishAccountStep>()
                 .Execute(model);
         }
 

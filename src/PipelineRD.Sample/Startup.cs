@@ -7,6 +7,8 @@ using Microsoft.Extensions.Hosting;
 using PipelineRD.Extensions;
 using PipelineRD.Settings;
 
+using StackExchange.Redis;
+
 using System.IO;
 
 namespace PipelineRD.Sample
