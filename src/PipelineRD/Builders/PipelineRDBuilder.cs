@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Caching.StackExchangeRedis;
+﻿using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyModel;
 
@@ -19,6 +20,7 @@ namespace PipelineRD.Builders
         public bool CacheSettingsIsConfigured { get; private set; }
         private bool _cacheIsConfigured;
         private IEnumerable<TypeInfo> _types;
+        private IDistributedCache _currentDistributedCache;
 
         public PipelineRDBuilder(IServiceCollection services)
         {
@@ -39,6 +41,13 @@ namespace PipelineRD.Builders
         private void UseCacheSettings(ICacheSettings settings)
         {
             _services.AddSingleton(settings);
+
+            var existentDistributedCache = _services.BuildServiceProvider().GetService<IDistributedCache>();
+            if (existentDistributedCache != null)
+            {
+                _currentDistributedCache = existentDistributedCache;
+            }
+
             CacheSettingsIsConfigured = true;
         }
 
@@ -53,21 +62,24 @@ namespace PipelineRD.Builders
             _cacheIsConfigured = true;
         }
 
+        /// <summary>
+        /// Use cache in redis. If the redis is already being used, it will ignore the connection string passed as parameter, 
+        /// but the additional settings (TTLInMinutes/KeyPreffix) are still needed and will be used.
+        /// </summary>
+        /// <param name="cacheSettings">The PipelineRD redis cache settings model.</param>
         public void UseCacheInRedis(RedisCacheSettings cacheSettings)
         {
             if (_cacheIsConfigured) return;
 
             UseCacheSettings(cacheSettings);
 
-            var redisOptions = new RedisCacheOptions()
+            if (_currentDistributedCache?.GetType() != typeof(RedisCache))
             {
-                Configuration = cacheSettings.ConnectionString
-            };
-
-            _services.AddStackExchangeRedisCache(options =>
-            {
-                options = redisOptions;
-            });
+                _services.AddStackExchangeRedisCache(options =>
+                {
+                    options.Configuration = cacheSettings.ConnectionString;
+                });
+            }
 
             UseCacheProvider();
             _cacheIsConfigured = true;

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Threading.Tasks;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -298,7 +299,7 @@ namespace PipelineRD
             {
                 RequestStepResult result;
 
-                if(currentStep.GetType() == typeof(IAsyncRequestStep<TContext>))
+                if(currentStep.GetType().GetInterfaces().Any(x => x == typeof(IAsyncRequestStep<TContext>)))
                 {
                     result = await ((IAsyncRequestStep<TContext>)currentStep).Execute();
                 } 
