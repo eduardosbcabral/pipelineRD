@@ -15,6 +15,7 @@ namespace PipelineRD
         private readonly IList<HtmlCustomDiagram> _diagrams;
         private readonly IEnumerable<TypeInfo> _types;
         private readonly IServiceProvider _serviceProvider;
+        private readonly string _applicationName;
 
         private bool isAlreadySet;
 
@@ -23,10 +24,11 @@ namespace PipelineRD
             _diagrams = new List<HtmlCustomDiagram>();
         }
 
-        public DocumentationBuilder(IEnumerable<TypeInfo> types, IServiceProvider serviceProvider) : this()
+        public DocumentationBuilder(string applicationName, IEnumerable<TypeInfo> types, IServiceProvider serviceProvider) : this()
         {
             _types = types;
             _serviceProvider = serviceProvider;
+            _applicationName = applicationName;
         }
 
         public void AddDiagram(HtmlCustomDiagram customDiagram)
@@ -37,7 +39,7 @@ namespace PipelineRD
             if (isAlreadySet) return;
 
             Build();
-            new HtmlBuilder().BuildDocumentation(path, _diagrams.ToArray());
+            new HtmlBuilder().BuildDocumentation(path, _applicationName, _diagrams.ToArray());
             isAlreadySet = true;
         }
 

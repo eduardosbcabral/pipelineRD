@@ -45,7 +45,7 @@ namespace PipelineRD.Sample
                 });
 
                 // localhost:{PORT}/docs
-                x.UseDocumentation(x =>
+                x.UseDocumentation("PipelineRD.Sample", x =>
                 {
                     var path = Path.Combine(Environment.ContentRootPath, "wwwroot", "docs");
                     x.UsePath(path);
