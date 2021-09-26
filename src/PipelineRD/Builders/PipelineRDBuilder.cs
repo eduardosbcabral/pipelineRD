@@ -27,14 +27,14 @@ namespace PipelineRD.Builders
             _services = services;
         }
 
-        public void UseDocumentation(Action<IDocumentationBuilder> configure)
+        public void UseDocumentation(string applicationName, Action<IDocumentationBuilder> configure)
         {
             if(_types == null)
             {
                 _types = GetTypes();
             }
 
-            var documentationBuilder = new DocumentationBuilder(_types, _services.BuildServiceProvider());
+            var documentationBuilder = new DocumentationBuilder(applicationName, _types, _services.BuildServiceProvider());
             configure(documentationBuilder);
         }
 

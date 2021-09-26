@@ -191,7 +191,7 @@ namespace PipelineRD.Tests.Builders
             {
                 x.UseCacheInMemory(new MemoryCacheSettings());
                 x.AddPipelineServices(x => x.InjectAll());
-                x.UseDocumentation(x =>
+                x.UseDocumentation("PipelineRD.Sample", x =>
                 {
                     x.UsePath(@"C:\dev\docs");
                 });
