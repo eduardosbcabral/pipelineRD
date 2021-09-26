@@ -8,6 +8,7 @@
     <PackageDescription>A chain of responsability pattern implementation in .NET that supports retry policy, sync and async steps, rollback, pipeline recovery by cache and visual documentation using diagrams.</PackageDescription>
     <RepositoryUrl>https://github.com/eduardosbcabral/pipelineRD</RepositoryUrl>
     <LangVersion>latest</LangVersion>
+    <PackageIconUrl>https://user-images.githubusercontent.com/29133996/134798452-de38b1d7-4a8a-4410-b60b-1814b7339a18.png</PackageIconUrl>
   </PropertyGroup>
 
   <ItemGroup>
