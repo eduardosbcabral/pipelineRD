@@ -38,10 +38,10 @@ namespace PipelineRD
 
         #region AddCondition
         IPipeline<TContext> When(Expression<Func<TContext, bool>> condition);
-        IPipeline<TContext> When<TCondition>();
-        #endregion
+        IPipeline<TContext> When<TCondition>() where TCondition : ICondition<TContext>;
+            #endregion
 
-        #region AddRollback
+            #region AddRollback
         IPipeline<TContext> AddRollback(IRollbackStep<TContext> rollbackStep);
         IPipeline<TContext> AddRollback<TRollbackRequestStep>() where TRollbackRequestStep : IRollbackStep<TContext>;
         #endregion
