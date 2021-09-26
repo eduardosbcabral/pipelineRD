@@ -69,7 +69,12 @@ namespace PipelineRD
                 {
                     var parameter = method.GetParameters().FirstOrDefault();
                     var requestInstance = Activator.CreateInstance(parameter.ParameterType, null);
-                    method.Invoke(builderWithDiagramInstance, new object[] { requestInstance });
+
+                    var result = method.Invoke(builderWithDiagramInstance, new object[] { requestInstance });
+                    if(result is Task task)
+                    {
+                        task.GetAwaiter().GetResult();
+                    }
                 }
             }
         }

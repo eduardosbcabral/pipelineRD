@@ -78,25 +78,14 @@ namespace PipelineRD.Diagrams
 
         public IPipeline<TContext> AddNext<TRequestStep>() where TRequestStep : IStep<TContext>
         {
-            var requestStep = (IStep<TContext>)_serviceProvider.GetService<TRequestStep>();
-            if (requestStep == null)
-            {
-                throw new NullReferenceException("[PipelineDiagram] Request step not found.");
-            }
-
-            var node = new Node(requestStep.GetType().Name);
+            var node = new Node(RemoveInterfaceNamePreffix(typeof(TRequestStep)));
             AddNodeR(node, ENodeType.Next);
             return this;
         }
 
         public IPipeline<TContext> AddNext<TRequestStep>(IStep<TContext> requestStep) where TRequestStep : IStep<TContext>
         {
-            if (requestStep == null)
-            {
-                throw new NullReferenceException("[PipelineDiagram] Request step cannot be null.");
-            }
-
-            var node = new Node(requestStep.GetType().Name);
+            var node = new Node(RemoveInterfaceNamePreffix(typeof(TRequestStep)));
             AddNodeR(node, ENodeType.Next);
             return this;
         }
@@ -128,14 +117,9 @@ namespace PipelineRD.Diagrams
             return this;
         }
 
-        public IPipeline<TContext> When<TCondition>()
+        public IPipeline<TContext> When<TCondition>() where TCondition : ICondition<TContext>
         {
-            var instance = (ICondition<TContext>)_serviceProvider.GetService<TCondition>();
-            if (instance == null)
-            {
-                throw new PipelineException("[PipelineDiagram] Could not find the condition. Try adding to the dependency injection container.");
-            }
-
+            var instance = (ICondition<TContext>)Activator.CreateInstance(typeof(TCondition));
             var expressionBody = ExpressionBody(instance.When());
             AddNodeR(new Node(expressionBody, NodeShapes.Rhombus), ENodeType.When);
             return this;
@@ -143,31 +127,21 @@ namespace PipelineRD.Diagrams
 
         public IPipeline<TContext> AddRollback(IRollbackStep<TContext> rollbackStep)
         {
-            if (rollbackStep == null)
-            {
-                throw new NullReferenceException("[PipelineDiagram] Request step not found.");
-            }
-
-            var node = new Node(rollbackStep.GetType().Name);
+            var node = new Node(RemoveInterfaceNamePreffix(rollbackStep?.GetType()));
             AddNodeR(node, ENodeType.Rollback);
             return this;
         }
 
         public IPipeline<TContext> AddRollback<TRollbackRequestStep>() where TRollbackRequestStep : IRollbackStep<TContext>
         {
-            var rollbackStep = (IRollbackStep<TContext>)_serviceProvider.GetService<TRollbackRequestStep>();
-            return AddRollback(rollbackStep);
+            var node = new Node(RemoveInterfaceNamePreffix(typeof(TRollbackRequestStep)));
+            AddNodeR(node, ENodeType.Next);
+            return this;
         }
 
         public IPipeline<TContext> AddFinally<TRequestStep>() where TRequestStep : IStep<TContext>
         {
-            var requestStep = (IStep<TContext>)_serviceProvider.GetService<TRequestStep>();
-            if (requestStep == null)
-            {
-                throw new NullReferenceException("[PipelineDiagram] Request step not found.");
-            }
-
-            var node = new Node(requestStep.GetType().Name);
+            var node = new Node(RemoveInterfaceNamePreffix(typeof(TRequestStep)));
             AddNodeR(node, ENodeType.Next);
             return this;
         }
@@ -276,5 +250,11 @@ namespace PipelineRD.Diagrams
 
         private void AddAtPreviousNodeR(Node node, ENodeType type)
             => _nodes.Insert(_nodes.Count - 1 > 0 ? _nodes.Count - 1 : 0, new NodeR(node, type));
+
+        private string RemoveInterfaceNamePreffix(Type type)
+        {
+            var nodeName = type?.Name;
+            return nodeName.FirstOrDefault().ToString() == "I" ? nodeName.Substring(1, nodeName.Length-1) : nodeName;
+        }
     }
 }

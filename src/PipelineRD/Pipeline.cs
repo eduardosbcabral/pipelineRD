@@ -148,7 +148,7 @@ namespace PipelineRD
             return this;
         }
 
-        public IPipeline<TContext> When<TCondition>()
+        public IPipeline<TContext> When<TCondition>() where TCondition : ICondition<TContext>
         {
             var instance = (ICondition<TContext>)_serviceProvider.GetService<TCondition>();
             if (instance == null)
