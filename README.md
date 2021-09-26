@@ -4,6 +4,10 @@
 [![NuGet](https://img.shields.io/nuget/dt/pipelineRD.svg)](https://www.nuget.org/packages/PipelineRD) 
 [![NuGet](https://img.shields.io/nuget/vpre/PipelineRD.svg)](https://www.nuget.org/packages/PipelineRD)
 
+<p align="center">
+   <img width="770" height="180" src="https://user-images.githubusercontent.com/29133996/134793179-127a843e-0eca-4c62-8e81-ec75f1ed7a81.png">
+</p>
+
 A chain of responsability pattern implementation in .NET
 
 Supports retry policy, sync and async steps, rollback, pipeline recovery by cache and visual documentation using diagrams.
