@@ -8,6 +8,6 @@
         }
     }
 
-    public interface ISecondSampleRollbackStep : IRollbackRequestStep<ContextSample>
+    public interface ISecondSampleRollbackStep : IRollbackStep<ContextSample>
     { }
 }

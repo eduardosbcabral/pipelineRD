@@ -28,12 +28,14 @@ namespace PipelineRD
         private JsonSerializer GetSerializer()
         {
             if (_serializer == null)
+            {
                 _serializer = new JsonSerializer()
                 {
                     ContractResolver = new PrivateSetterContractResolver(),
                     Converters = { new ContextConverter() },
                     TypeNameHandling = TypeNameHandling.Auto
                 };
+            }
 
             return _serializer;
         }
