@@ -211,7 +211,7 @@ namespace PipelineRD.Tests.Builders
 
     interface IPipelineRDTestStep : IRequestStep<PipelineRDContextTest> { }
 
-    interface IPipelineRDTestRollbackStep : IRollbackRequestStep<PipelineRDContextTest> { }
+    interface IPipelineRDTestRollbackStep : IRollbackStep<PipelineRDContextTest> { }
 
     class PipelineRDContextTest : BaseContext { public bool Valid { get; set; } }
 

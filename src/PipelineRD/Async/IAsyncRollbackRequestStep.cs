@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace PipelineRD
 {
-    public interface IAsyncRollbackRequestStep<TPipelineContext> : IRollbackStep<TPipelineContext> where TPipelineContext : BaseContext
+    public interface IAsyncRollbackRequestStep<TPipelineContext> : IStep<TPipelineContext> where TPipelineContext : BaseContext
     {
         AsyncPolicy Policy { get; set; }
         Task HandleRollback();

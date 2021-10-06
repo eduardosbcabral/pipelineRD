@@ -7,6 +7,6 @@
         }
     }
 
-    public interface ICreateAccountRollbackStep : IRollbackRequestStep<BankContext>
+    public interface ICreateAccountRollbackStep : IRollbackStep<BankContext>
     { }
 }

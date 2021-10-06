@@ -6,24 +6,24 @@ using System.Linq.Expressions;
 
 namespace PipelineRD
 {
-    public abstract class RollbackRequestStep<TContext> : IRollbackRequestStep<TContext> where TContext : BaseContext
+    public abstract class RollbackRequestStep<TContext> : IRollbackStep<TContext> where TContext : BaseContext
     {
         public Expression<Func<TContext, bool>> ConditionToExecute { get; set; }
         public Policy Policy { get; set; }
-        public TContext Context => _pipeline.Context;
         public int? RollbackIndex { get; private set; }
         public Expression<Func<TContext, bool>> RequestCondition { get; set; }
+        public TContext Context { get; private set; }
 
         private IPipeline<TContext> _pipeline;
-        private IPipelineRequest _request;
+
+        public string Identifier => $"{_pipeline.Identifier}.{GetType().Name}";
 
         #region Methods
         public TRequest Request<TRequest>() where TRequest : IPipelineRequest
             => Context.Request<TRequest>();
 
-        public void SetPipeline(IPipeline<TContext> pipeline) => _pipeline = pipeline;
-
-        public void SetRequest(IPipelineRequest request) => _request = request;
+        void IStep<TContext>.SetPipeline(Pipeline<TContext> pipeline) => _pipeline = pipeline;
+        public void SetContext(TContext context) => Context = context;
 
         public abstract void HandleRollback();
         #endregion

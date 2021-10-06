@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 
 using PipelineRD.Async;
-using PipelineRD.Builders;
 using PipelineRD.Extensions;
 
 using Polly;
@@ -82,6 +81,7 @@ namespace PipelineRD
             }
 
             requestStep.SetPipeline(this);
+            requestStep.SetContext(Context);
 
             _requestSteps.Enqueue(requestStep);
 
@@ -103,6 +103,7 @@ namespace PipelineRD
             }
 
             requestStep.SetPipeline(this);
+            requestStep.SetContext(Context);
 
             _requestSteps.Enqueue(requestStep);
 
@@ -182,6 +183,7 @@ namespace PipelineRD
                 lastStep.AddRollbackIndex(rollbackIndex);
                 rollbackStep.ConditionToExecute = lastStep.ConditionToExecute;
                 rollbackStep.SetPipeline(this);
+                rollbackStep.SetContext(Context);
                 _rollbacks.Push(rollbackStep);
             }
 
@@ -204,7 +206,7 @@ namespace PipelineRD
                 }
                 else
                 {
-                    ((IRollbackRequestStep<TContext>)rollbackStep).Execute();
+                    ((IRollbackStep<TContext>)rollbackStep).Execute();
                 }
             }
         }
@@ -240,7 +242,7 @@ namespace PipelineRD
 
             if (_useReuseRequisitionHash)
             {
-                var snapshot = _cacheProvider.Get<PipelineSnapshot>(hash).Result;
+                var snapshot = await _cacheProvider.Get<PipelineSnapshot>(hash);
                 if (snapshot != null)
                 {
                     if (snapshot.Success)

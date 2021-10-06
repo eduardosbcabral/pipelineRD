@@ -10,12 +10,11 @@ namespace PipelineRD.Async
     public abstract class AsyncRequestStep<TContext> : IAsyncRequestStep<TContext> where TContext : BaseContext
     {
         public AsyncPolicy<RequestStepResult> Policy { get; set; }
-        public TContext Context => _pipeline?.Context;
         public Expression<Func<TContext, bool>> ConditionToExecute { get; set; }
         public int? RollbackIndex { get; private set; }
+        public TContext Context { get; private set; }
 
         private Pipeline<TContext> _pipeline;
-        private IPipelineRequest _request;
 
         private const int DEFAULT_FAILURE_STATUS_CODE = 400;
         private const int DEFAULT_SUCCESS_STATUS_CODE = 200;
@@ -32,9 +31,8 @@ namespace PipelineRD.Async
         public TRequest Request<TRequest>() where TRequest : IPipelineRequest
             => Context.Request<TRequest>();
 
-        public void SetPipeline(Pipeline<TContext> pipeline) => _pipeline = pipeline;
-
-        public void SetRequest(IPipelineRequest request) => _request = request;
+        void IStep<TContext>.SetPipeline(Pipeline<TContext> pipeline) => _pipeline = pipeline;
+        public void SetContext(TContext context) => Context = context;
 
         public abstract Task<RequestStepResult> HandleRequest();
         #endregion
