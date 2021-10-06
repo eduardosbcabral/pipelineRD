@@ -10,12 +10,12 @@ namespace PipelineRD
     public abstract class RequestStep<TContext> : IRequestStep<TContext> where TContext : BaseContext
     {
         public Policy<RequestStepResult> Policy { get; set; }
-        public TContext Context => _pipeline?.Context;
         public Expression<Func<TContext, bool>> ConditionToExecute { get; set; }
         public int? RollbackIndex { get; private set; }
+        public TContext Context { get; private set; }
 
-        private Pipeline<TContext> _pipeline;
         private IPipelineRequest _request;
+        private Pipeline<TContext> _pipeline;
 
         private const int DEFAULT_FAILURE_STATUS_CODE = 400;
         private const int DEFAULT_SUCCESS_STATUS_CODE = 200;
@@ -32,9 +32,8 @@ namespace PipelineRD
         public TRequest Request<TRequest>() where TRequest : IPipelineRequest
             => Context.Request<TRequest>();
 
-        public void SetPipeline(Pipeline<TContext> pipeline) => _pipeline = pipeline;
-
-        public void SetRequest(IPipelineRequest request) => _request = request;
+        void IStep<TContext>.SetPipeline(Pipeline<TContext> pipeline) => _pipeline = pipeline;
+        public void SetContext(TContext context) => Context = context;
 
         public abstract RequestStepResult HandleRequest();
         #endregion
@@ -45,6 +44,14 @@ namespace PipelineRD
 
         public RequestStepResult Next(string requestHandlerIdentifier)
         {
+            if(_pipeline == null)
+            {
+                return RequestStepHandlerResultBuilder.Instance()
+                    .WithResultObject("Next")
+                    .WithSuccess()
+                    .Build();
+            }
+
             if (!string.IsNullOrEmpty(requestHandlerIdentifier))
             {
                 return Task.Run(() => _pipeline.ExecuteFromSpecificRequestStep(requestHandlerIdentifier)).GetAwaiter().GetResult();

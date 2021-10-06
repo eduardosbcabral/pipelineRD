@@ -278,5 +278,25 @@ namespace PipelineRD.Tests
             // Four because it will execute once and retry 3 more times.
             Assert.Equal(4, pipeline.Context.SecondWasExecutedCount);
         }
+
+        [Fact]
+        public void Should_test_execute_successfully()
+        {
+            var request = new SampleRequest()
+            {
+                ValidFirst = true
+            };
+            
+            var context = new ContextSample();
+            context.SetRequest(request);
+
+            var step = new FirstSampleStep();
+            step.SetContext(context);
+            
+            var result = step.HandleRequest();
+
+            Assert.Equal("Next", result.ResultObject);
+            Assert.True(result.IsSuccess());
+        }
     }
 }

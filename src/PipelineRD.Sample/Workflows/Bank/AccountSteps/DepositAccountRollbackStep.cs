@@ -7,6 +7,6 @@
         }
     }
 
-    public interface IDepositAccountRollbackStep : IRollbackRequestStep<BankContext>
+    public interface IDepositAccountRollbackStep : IRollbackStep<BankContext>
     { }
 }

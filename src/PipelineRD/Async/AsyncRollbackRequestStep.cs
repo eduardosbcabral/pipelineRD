@@ -11,20 +11,21 @@ namespace PipelineRD
     {
         public Expression<Func<TContext, bool>> ConditionToExecute { get; set; }
         public AsyncPolicy Policy { get; set; }
-        public TContext Context => _pipeline.Context;
         public int? RollbackIndex { get; private set; }
         public Expression<Func<TContext, bool>> RequestCondition { get; set; }
+        public TContext Context { get; private set; }
 
         private IPipeline<TContext> _pipeline;
         private IPipelineRequest _request;
+
+        public string Identifier => $"{_pipeline.Identifier}.{GetType().Name}";
 
         #region Methods
         public TRequest Request<TRequest>() where TRequest : IPipelineRequest
             => Context.Request<TRequest>();
 
-        public void SetPipeline(IPipeline<TContext> pipeline) => _pipeline = pipeline;
-
-        public void SetRequest(IPipelineRequest request) => _request = request;
+        void IStep<TContext>.SetPipeline(Pipeline<TContext> pipeline) => _pipeline = pipeline;
+        public void SetContext(TContext context) => Context = context;
 
         public abstract Task HandleRollback();
         #endregion
