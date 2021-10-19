@@ -7,7 +7,7 @@ namespace PipelineRD
     {
         string Identifier { get; }
         TPipelineContext Context { get; }
-        TRequest Request<TRequest>() where TRequest : IPipelineRequest;
+        TRequest Request<TRequest>();
         Expression<Func<TPipelineContext, bool>> ConditionToExecute { get; set; }
         internal void SetPipeline(Pipeline<TPipelineContext> pipeline);
         void SetContext(TPipelineContext context);

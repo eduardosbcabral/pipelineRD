@@ -19,7 +19,7 @@ namespace PipelineRD
         public string Identifier => $"{_pipeline.Identifier}.{GetType().Name}";
 
         #region Methods
-        public TRequest Request<TRequest>() where TRequest : IPipelineRequest
+        public TRequest Request<TRequest>()
             => Context.Request<TRequest>();
 
         void IStep<TContext>.SetPipeline(Pipeline<TContext> pipeline) => _pipeline = pipeline;

@@ -215,7 +215,7 @@ namespace PipelineRD.Tests.Builders
 
     class PipelineRDContextTest : BaseContext { public bool Valid { get; set; } }
 
-    class PipelineRDRequestTest : IPipelineRequest { }
+    class PipelineRDRequestTest { }
 
     class PipelineRDRequestTestValidator : AbstractValidator<PipelineRDRequestTest> { }
 

@@ -22,8 +22,8 @@ namespace PipelineRD
         #endregion
 
         #region Execute
-        Task<RequestStepResult> Execute<TRequest>(TRequest request) where TRequest : IPipelineRequest;
-        Task<RequestStepResult> Execute<TRequest>(TRequest request, string idempotencyKey) where TRequest : IPipelineRequest;
+        Task<RequestStepResult> Execute<TRequest>(TRequest request);
+        Task<RequestStepResult> Execute<TRequest>(TRequest request, string idempotencyKey);
         #endregion
 
         #region AddNext

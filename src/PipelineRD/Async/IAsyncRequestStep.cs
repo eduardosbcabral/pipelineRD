@@ -8,7 +8,7 @@ namespace PipelineRD.Async
     {
         AsyncPolicy<RequestStepResult> Policy { get; set; }
         Task<RequestStepResult> HandleRequest();
-        Task<RequestStepResult> Next();
+        RequestStepResult Next();
         Task<RequestStepResult> Next(string requestStepHandlerId);
         Task<RequestStepResult> Execute();
     }

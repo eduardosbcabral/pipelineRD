@@ -1,6 +1,6 @@
 ﻿namespace PipelineRD.Sample.Models
 {
-    public class CreateAccountModel : IPipelineRequest
+    public class CreateAccountModel
     {
         public string Cidade { get; set; }
     }

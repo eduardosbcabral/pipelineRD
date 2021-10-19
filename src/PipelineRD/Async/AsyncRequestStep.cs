@@ -28,7 +28,7 @@ namespace PipelineRD.Async
 
         #region Methods
 
-        public TRequest Request<TRequest>() where TRequest : IPipelineRequest
+        public TRequest Request<TRequest>()
             => Context.Request<TRequest>();
 
         void IStep<TContext>.SetPipeline(Pipeline<TContext> pipeline) => _pipeline = pipeline;
@@ -38,17 +38,17 @@ namespace PipelineRD.Async
         #endregion
 
         #region Next
-        public async Task<RequestStepResult> Next()
-           => await Next(string.Empty);
+        public RequestStepResult Next()
+           => Next(string.Empty).ConfigureAwait(false).GetAwaiter().GetResult();
 
         public async Task<RequestStepResult> Next(string requestHandlerIdentifier)
         {
             if (!string.IsNullOrEmpty(requestHandlerIdentifier))
             {
-                return await _pipeline.ExecuteFromSpecificRequestStep(requestHandlerIdentifier);
+                return await _pipeline.ExecuteFromSpecificRequestStep(requestHandlerIdentifier).ConfigureAwait(false);
             }
 
-            return await _pipeline.ExecuteNextRequestStep();
+            return await _pipeline.ExecuteNextRequestStep().ConfigureAwait(false);
         }
         #endregion
 
@@ -114,12 +114,12 @@ namespace PipelineRD.Async
                     }
 
                     return await HandleRequest();
-                });
+                }).ConfigureAwait(false);
       
             }
             else
             {
-                result = await HandleRequest();
+                result = await HandleRequest().ConfigureAwait(false);
             }
 
             return result;
@@ -127,21 +127,21 @@ namespace PipelineRD.Async
         #endregion
 
         #region Rollback
-        protected async Task<RequestStepResult> Rollback(object result, int statusCode)
-            => await Rollback(BaseFinish(result: result, statusCode: statusCode));
+        protected RequestStepResult Rollback(object result, int statusCode)
+            => Rollback(BaseFinish(result: result, statusCode: statusCode)).ConfigureAwait(false).GetAwaiter().GetResult();
 
-        protected async Task<RequestStepResult> Rollback(object result, HttpStatusCode httpStatusCode)
-            => await Rollback(BaseFinish(result: result, statusCode: (int)httpStatusCode));
+        protected RequestStepResult Rollback(object result, HttpStatusCode httpStatusCode)
+            => Rollback(BaseFinish(result: result, statusCode: (int)httpStatusCode)).ConfigureAwait(false).GetAwaiter().GetResult();
 
-        protected async Task<RequestStepResult> Rollback(int statusCode)
-            => await Rollback(BaseFinish(statusCode: statusCode));
+        protected RequestStepResult Rollback(int statusCode)
+            => Rollback(BaseFinish(statusCode: statusCode)).ConfigureAwait(false).GetAwaiter().GetResult();
 
-        protected async Task<RequestStepResult> Rollback(object result)
-            => await Rollback(BaseFinish(result));
+        protected RequestStepResult Rollback(object result)
+            => Rollback(BaseFinish(result)).ConfigureAwait(false).GetAwaiter().GetResult();
 
         private async Task<RequestStepResult> Rollback(RequestStepResult result)
         {
-            await _pipeline.ExecuteRollback();
+            await _pipeline.ExecuteRollback().ConfigureAwait(false);
             return result;
         }
         #endregion
