@@ -16,12 +16,12 @@ namespace PipelineRD
         public TContext Context { get; private set; }
 
         private IPipeline<TContext> _pipeline;
-        private IPipelineRequest _request;
+        private object _request;
 
         public string Identifier => $"{_pipeline.Identifier}.{GetType().Name}";
 
         #region Methods
-        public TRequest Request<TRequest>() where TRequest : IPipelineRequest
+        public TRequest Request<TRequest>()
             => Context.Request<TRequest>();
 
         void IStep<TContext>.SetPipeline(Pipeline<TContext> pipeline) => _pipeline = pipeline;

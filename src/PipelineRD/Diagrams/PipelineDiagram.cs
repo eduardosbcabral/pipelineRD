@@ -53,10 +53,10 @@ namespace PipelineRD.Diagrams
             return this;
         }
 
-        public Task<RequestStepResult> Execute<TRequest>(TRequest request) where TRequest : IPipelineRequest
+        public Task<RequestStepResult> Execute<TRequest>(TRequest request)
             => Execute(request, string.Empty);
 
-        public Task<RequestStepResult> Execute<TRequest>(TRequest request, string idempotencyKey) where TRequest : IPipelineRequest
+        public Task<RequestStepResult> Execute<TRequest>(TRequest request, string idempotencyKey)
         {
             var node = new Node("Finish", NodeShapes.Circle);
             AddNodeR(node, ENodeType.Next);

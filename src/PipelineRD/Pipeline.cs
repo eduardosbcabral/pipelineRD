@@ -222,10 +222,10 @@ namespace PipelineRD
         #endregion
 
         #region Execute
-        public async Task<RequestStepResult> Execute<TRequest>(TRequest request) where TRequest : IPipelineRequest
-            => await Execute (request, string.Empty);
+        public async Task<RequestStepResult> Execute<TRequest>(TRequest request)
+            => await Execute(request, string.Empty).ConfigureAwait(false);
 
-        public async Task<RequestStepResult> Execute<TRequest>(TRequest request, string idempotencyKey) where TRequest : IPipelineRequest
+        public async Task<RequestStepResult> Execute<TRequest>(TRequest request, string idempotencyKey)
         {
             var headStep = HeadStep();
             if (headStep == null)
@@ -242,7 +242,7 @@ namespace PipelineRD
 
             if (_useReuseRequisitionHash)
             {
-                var snapshot = await _cacheProvider.Get<PipelineSnapshot>(hash);
+                var snapshot = await _cacheProvider.Get<PipelineSnapshot>(hash).ConfigureAwait(false);
                 if (snapshot != null)
                 {
                     if (snapshot.Success)
@@ -260,7 +260,7 @@ namespace PipelineRD
             // Set the Request in the shared Context
             Context.SetRequest(request);
 
-            var pipelineResult = await ExecutePipeline(firstStepIdentifier);
+            var pipelineResult = await ExecutePipeline(firstStepIdentifier).ConfigureAwait(false);
 
             if (pipelineResult == null)
             {
@@ -274,7 +274,7 @@ namespace PipelineRD
                     CurrentRequestStepIdentifier,
                     Context);
 
-                await _cacheProvider.Add(snapshot, hash);
+                await _cacheProvider.Add(snapshot, hash).ConfigureAwait(false);
             }
 
             return pipelineResult;
@@ -284,12 +284,12 @@ namespace PipelineRD
         {
             if (CurrentRequestStepIdentifier.Equals(requestStepIdentifier, StringComparison.InvariantCultureIgnoreCase))
             {
-                return await ExecuteNextRequestStep();
+                return await ExecuteNextRequestStep().ConfigureAwait(false);
             }
 
             DequeueCurrentStep();
             SetCurrentRequestStepIdentifier(HeadStep());
-            return await ExecuteFromSpecificRequestStep(requestStepIdentifier);
+            return await ExecuteFromSpecificRequestStep(requestStepIdentifier).ConfigureAwait(false);
         }
 
         public async Task<RequestStepResult> ExecuteNextRequestStep() 
@@ -303,7 +303,7 @@ namespace PipelineRD
 
                 if(currentStep.GetType().GetInterfaces().Any(x => x == typeof(IAsyncRequestStep<TContext>)))
                 {
-                    result = await ((IAsyncRequestStep<TContext>)currentStep).Execute();
+                    result = await ((IAsyncRequestStep<TContext>)currentStep).Execute().ConfigureAwait(false);
                 } 
                 else
                 {
@@ -313,11 +313,11 @@ namespace PipelineRD
                 return result;
             }
 
-            return await ExecuteNextRequestStep();
+            return await ExecuteNextRequestStep().ConfigureAwait(false);
         }
 
         private async Task<RequestStepResult> ExecuteStep(IAsyncRequestStep<TContext> step)
-            => await step.Execute();
+            => await step.Execute().ConfigureAwait(false);
 
         private RequestStepResult ExecuteStep(IRequestStep<TContext> step)
             => step.Execute();
@@ -332,11 +332,11 @@ namespace PipelineRD
             {
                 if (!string.IsNullOrEmpty(firstStepIdentifier))
                 {
-                    pipelineResult = await ExecuteFromSpecificRequestStep(firstStepIdentifier);
+                    pipelineResult = await ExecuteFromSpecificRequestStep(firstStepIdentifier).ConfigureAwait(false);
                 }
                 else
                 {
-                    pipelineResult = await ExecuteNextRequestStep();
+                    pipelineResult = await ExecuteNextRequestStep().ConfigureAwait(false);
                 }
             }
             catch (PipelinePolicyException pipelinePolicyException)
@@ -356,7 +356,7 @@ namespace PipelineRD
             finally
             {
                 if (_finallyStepIsSet) {
-                    pipelineResult = await ExecuteFinallyHandler();
+                    pipelineResult = await ExecuteFinallyHandler().ConfigureAwait(false);
                 }
             }
 
@@ -372,7 +372,7 @@ namespace PipelineRD
             {
                 if (lastStep.GetType() == typeof(IAsyncRequestStep<TContext>))
                 {
-                    result = await ((IAsyncRequestStep<TContext>)lastStep).Execute();
+                    result = await ((IAsyncRequestStep<TContext>)lastStep).Execute().ConfigureAwait(false);
                 }
                 else
                 {

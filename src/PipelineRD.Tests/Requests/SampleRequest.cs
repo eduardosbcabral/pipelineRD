@@ -2,7 +2,7 @@
 
 namespace PipelineRD.Tests.Request
 {
-    public class SampleRequest : IPipelineRequest
+    public class SampleRequest
     {
         public Guid Guid { get; set; } = Guid.NewGuid();
 

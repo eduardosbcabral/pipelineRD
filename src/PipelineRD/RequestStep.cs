@@ -14,7 +14,7 @@ namespace PipelineRD
         public int? RollbackIndex { get; private set; }
         public TContext Context { get; private set; }
 
-        private IPipelineRequest _request;
+        private object _request;
         private Pipeline<TContext> _pipeline;
 
         private const int DEFAULT_FAILURE_STATUS_CODE = 400;
@@ -29,7 +29,7 @@ namespace PipelineRD
 
         #region Methods
 
-        public TRequest Request<TRequest>() where TRequest : IPipelineRequest
+        public TRequest Request<TRequest>()
             => Context.Request<TRequest>();
 
         void IStep<TContext>.SetPipeline(Pipeline<TContext> pipeline) => _pipeline = pipeline;

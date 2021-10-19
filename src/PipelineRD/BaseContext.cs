@@ -6,7 +6,7 @@ namespace PipelineRD
     public abstract class BaseContext
     {
         public string Id { get; set; }
-        public IPipelineRequest PipelineRequest { get; set; }
+        public object PipelineRequest { get; set; }
         public RequestStepResult Response { get; set; }
 
         public BaseContext()
@@ -14,10 +14,10 @@ namespace PipelineRD
             Id = ToString();
         }
 
-        public void SetRequest(IPipelineRequest request)
+        public void SetRequest(object request)
             => PipelineRequest = request;
 
-        public TRequest Request<TRequest>() where TRequest : IPipelineRequest
+        public TRequest Request<TRequest>()
             => (TRequest)PipelineRequest;
     }
 }
