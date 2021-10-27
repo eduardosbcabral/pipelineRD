@@ -24,6 +24,6 @@ Or via the .NET Core command line interface:
     
     dotnet add package PipelineRD
     
-Either commands, from Package Manager Console or .NET Core CLI, will download and install MediatR and all required dependencies.
+Either commands, from Package Manager Console or .NET Core CLI, will download and install PipelineRD and all required dependencies.
     
 PS: The R in the name stands for request and D for diagrams.
