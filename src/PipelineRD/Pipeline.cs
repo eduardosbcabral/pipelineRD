@@ -352,6 +352,8 @@ namespace PipelineRD
                         Log.Logger.Error(ex, $"Error - {CurrentRequestStepIdentifier}");
                     }
                 }
+
+                throw ex;
             }
             finally
             {

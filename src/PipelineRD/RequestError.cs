@@ -1,6 +1,5 @@
 ﻿using Newtonsoft.Json;
 using System;
-using WebApi.Models.Response;
 
 namespace PipelineRD
 {
@@ -23,27 +22,23 @@ namespace PipelineRD
         
         public RequestError() { }
 
-        public RequestError(string message) : this(null, message, null, null, null) { }
+        public RequestError(string message)
+        {
+            Message = message;
+        }
 
-        public RequestError(object result) : this(null, null, null, result, null) { }
-
-        public RequestError(Exception exception) : this(null, null, exception, null, null) { }
-
-        public RequestError(string source, string message) : this(source, message, null, null, null) { }
-
-        public RequestError(string source, object result) : this(source, null, null, result, null) { }
-
-        public RequestError(string source, string message, string property) : this(source, message, null, null, property) { }
-
-        public RequestError(ErrorItemResponse error) : this(null, error.Message, null, null, error.Property) { }
-
-        public RequestError(string source, string message, Exception exception, object result, string property)
+        public RequestError(Exception exception)
         {
             Exception = exception;
+        }
+
+        public RequestError(string source, string property, string message, object result, Exception exception)
+        {
             Source = source;
-            Message = message;
-            Result = result;
             Property = property;
+            Message = message;
+            Result = result; 
+            Exception = exception;
         }
     }
 }
