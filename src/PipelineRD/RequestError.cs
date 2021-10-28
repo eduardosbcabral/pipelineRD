@@ -27,6 +27,12 @@ namespace PipelineRD
             Message = message;
         }
 
+        public RequestError(string source, string message)
+        {
+            Source = source;
+            Message = message;
+        }
+
         public RequestError(Exception exception)
         {
             Exception = exception;
