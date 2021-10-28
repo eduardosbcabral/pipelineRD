@@ -1,6 +1,7 @@
 ﻿using Polly;
 
 using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Net;
 using System.Threading.Tasks;
@@ -62,43 +63,50 @@ namespace PipelineRD
         #endregion
 
         #region Abort
-        protected RequestStepResult Abort(string errorMessage, int statusCode)
-            => Context.Response = BaseAbort(errorMessage: errorMessage, statusCode: statusCode);
-
         protected RequestStepResult Abort(string errorMessage, HttpStatusCode httpStatusCode)
-            => Context.Response = BaseAbort(errorMessage: errorMessage, statusCode: (int)httpStatusCode);
-
-        protected RequestStepResult Abort(string errorMessage)
-            => BaseAbort(errorMessage: errorMessage);
-
-        protected RequestStepResult Abort(object errorResult, int statusCode)
-            => Context.Response = BaseAbort(errorResultObject: errorResult, statusCode: statusCode);
-
-        protected RequestStepResult Abort(object errorResult, HttpStatusCode httpStatusCode)
-            => Context.Response = BaseAbort(errorResultObject: errorResult, statusCode: (int)httpStatusCode);
-
-        protected RequestStepResult Abort(object errorResult)
-            => Context.Response = BaseAbort(errorResultObject: errorResult);
-
-        protected RequestStepResult Abort(RequestError errorResult, int statusCode)
-            => Context.Response = BaseAbort(errorResult: errorResult, statusCode: statusCode);
-
-        protected RequestStepResult Abort(RequestError errorResult, HttpStatusCode httpStatusCode)
-            => Context.Response = BaseAbort(errorResult: errorResult, statusCode: (int)httpStatusCode);
-
-        protected RequestStepResult Abort(RequestError errorResult)
-            => Context.Response = BaseAbort(errorResult: errorResult);
-
-        private RequestStepResult BaseAbort(
-            string errorMessage = "",
-            int statusCode = DEFAULT_FAILURE_STATUS_CODE,
-            object errorResultObject = null,
-            RequestError errorResult = null)
             => Context.Response = RequestStepHandlerResultBuilder.Instance()
                 .WithErrorMessage(errorMessage)
-                .WithStatusCode(statusCode)
-                .WithResultObject(errorResultObject)
-                .WithErrors(errorResult)
+                .WithStatusCode((int)httpStatusCode)
+                .WithFailure()
+                .WithRequestStepIdentifier(Identifier)
+                .Build();
+
+        protected RequestStepResult Abort(string errorMessage, int httpStatusCode)
+            => Context.Response = RequestStepHandlerResultBuilder.Instance()
+                .WithErrorMessage(errorMessage)
+                .WithStatusCode(httpStatusCode)
+                .WithFailure()
+                .WithRequestStepIdentifier(Identifier)
+                .Build();
+
+        protected RequestStepResult Abort(RequestError errorResult, HttpStatusCode httpStatusCode)
+            => Context.Response = RequestStepHandlerResultBuilder.Instance()
+                .WithError(errorResult)
+                .WithStatusCode((int)httpStatusCode)
+                .WithFailure()
+                .WithRequestStepIdentifier(Identifier)
+                .Build();
+
+        protected RequestStepResult Abort(RequestError errorResult, int httpStatusCode)
+            => Context.Response = RequestStepHandlerResultBuilder.Instance()
+                .WithError(errorResult)
+                .WithStatusCode(httpStatusCode)
+                .WithFailure()
+                .WithRequestStepIdentifier(Identifier)
+                .Build();
+
+        protected RequestStepResult Abort(List<RequestError> errorsResult, HttpStatusCode httpStatusCode)
+            => Context.Response = RequestStepHandlerResultBuilder.Instance()
+                .WithErrors(errorsResult)
+                .WithStatusCode((int)httpStatusCode)
+                .WithFailure()
+                .WithRequestStepIdentifier(Identifier)
+                .Build();
+
+        protected RequestStepResult Abort(List<RequestError> errorsResult, int httpStatusCode)
+            => Context.Response = RequestStepHandlerResultBuilder.Instance()
+                .WithErrors(errorsResult)
+                .WithStatusCode(httpStatusCode)
                 .WithFailure()
                 .WithRequestStepIdentifier(Identifier)
                 .Build();

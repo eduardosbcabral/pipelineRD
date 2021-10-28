@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Collections.Generic;
+using System.Net;
 
 using WebApi.Models.Response;
 
@@ -13,9 +14,27 @@ namespace PipelineRD
             this.Reset();
         }
 
-        public RequestStepHandlerResultBuilder WithErrors(params RequestError[] errors)
+        public RequestStepHandlerResultBuilder WithErrors(List<RequestError> errors)
         {
-            this.Handler.SetErrors(errors);
+            if (errors == null)
+                return this;
+
+            foreach (var error in errors)
+            {
+                if (error != null)
+                {
+                    this.Handler.SetError(error);
+                }
+            }
+            return this;
+        }
+
+        public RequestStepHandlerResultBuilder WithError(RequestError error)
+        {
+            if (error == null) 
+                return this;
+
+            this.Handler.SetError(error);
             return this;
         }
 

@@ -12,7 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DiagramBuilder" Version="1.0.1" />
+    <PackageReference Include="DiagramBuilder" Version="1.0.2" />
     <PackageReference Include="JsonNet.ContractResolvers" Version="2.0.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="5.0.0" />
