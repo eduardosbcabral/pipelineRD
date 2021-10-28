@@ -95,6 +95,14 @@ namespace PipelineRD
                 .WithRequestStepIdentifier(Identifier)
                 .Build();
 
+        protected RequestStepResult Abort(List<RequestError> errorsResult, HttpStatusCode httpStatusCode)
+            => Context.Response = RequestStepHandlerResultBuilder.Instance()
+                .WithErrors(errorsResult)
+                .WithStatusCode((int)httpStatusCode)
+                .WithFailure()
+                .WithRequestStepIdentifier(Identifier)
+                .Build();
+
         protected RequestStepResult Abort(List<RequestError> errorsResult, int httpStatusCode)
             => Context.Response = RequestStepHandlerResultBuilder.Instance()
                 .WithErrors(errorsResult)
