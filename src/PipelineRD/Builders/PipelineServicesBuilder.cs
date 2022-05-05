@@ -9,6 +9,8 @@ using System.Reflection;
 
 namespace PipelineRD.Builders
 {
+    using Enums;
+
     public class PipelineServicesBuilder : IPipelineServicesBuilder
     {
         public IEnumerable<TypeInfo> Types { get; private set; }
@@ -27,17 +29,19 @@ namespace PipelineRD.Builders
             Services = services;
         }
 
-        public void InjectAll()
+        public void InjectAll(InjectionLifetime? lifetime = null)
         {
-            InjectContexts();
-            InjectSteps();
-            InjectPipelineBuilders();
-            InjectPipelineInitializers();
-            InjectPipelines();
+            lifetime ??= InjectionLifetime.Scoped;
+            InjectContexts(lifetime);
+            InjectSteps(lifetime);
+            InjectPipelineBuilders(lifetime);
+            InjectPipelineInitializers(lifetime);
+            InjectPipelines(lifetime);
         }
 
-        public void InjectContexts()
+        public void InjectContexts(InjectionLifetime? lifetime = null)
         {
+            lifetime ??= InjectionLifetime.Scoped;
             if (_contextsAlreadySet) return;
 
             var contexts = Types.Where(a => a.IsClass && a.BaseType == typeof(BaseContext));
@@ -52,13 +56,33 @@ namespace PipelineRD.Builders
             }
 
             foreach (var context in contexts)
-                Services.AddScoped(context.AsType());
+                switch(lifetime)
+                {
+                    case InjectionLifetime.Singleton:
+                    {
+                        Services.AddSingleton(context.AsType());
+                        break;
+                    }
+                    case InjectionLifetime.Scoped:
+                    {
+                        Services.AddScoped(context.AsType());
+                        break;
+                    }
+                    case InjectionLifetime.Transient:
+                    {
+                        Services.AddTransient(context.AsType());
+                        break;
+                    }
+                    default: break;
+                }
+               
 
             _contextsAlreadySet = true;
         }
 
-        public void InjectSteps()
+        public void InjectSteps(InjectionLifetime? lifetime = null)
         {
+            lifetime ??= InjectionLifetime.Scoped;
             if (_stepsAlreadySet) return;
 
             var searchClasses = new Type[] { typeof(RequestStep<>), typeof(RollbackRequestStep<>), typeof(AsyncRequestStep<>) };
@@ -73,29 +97,89 @@ namespace PipelineRD.Builders
 
             foreach (var step in steps)
             {
-                Services.AddScoped(step.Interface, step.Type);
+                switch(lifetime)
+                {
+                    case InjectionLifetime.Singleton:
+                    {
+                        Services.AddSingleton(step.Interface, step.Type);
+                        break;
+                    }
+                    case InjectionLifetime.Scoped:
+                    {
+                        Services.AddScoped(step.Interface, step.Type);
+                        break;
+                    }
+                    case InjectionLifetime.Transient:
+                    {
+                        Services.AddTransient(step.Interface, step.Type);
+                        break;
+                    }
+                    default: break;
+                }
+   
             }
 
             _stepsAlreadySet = true;
         }
 
-        public void InjectPipelines()
+        public void InjectPipelines(InjectionLifetime? lifetime = null)
         {
+            lifetime ??= InjectionLifetime.Scoped;
             if (_pipelinesAlreadySet) return;
 
-            Services.AddScoped(typeof(IPipeline<>), typeof(Pipeline<>));
+             
+            switch(lifetime)
+            {
+                case InjectionLifetime.Singleton:
+                {
+                    Services.AddSingleton(typeof(IPipeline<>), typeof(Pipeline<>));
+                    break;
+                }
+                case InjectionLifetime.Scoped:
+                {
+                    Services.AddScoped(typeof(IPipeline<>), typeof(Pipeline<>));
+                    break;
+                }
+                case InjectionLifetime.Transient:
+                {
+                    Services.AddTransient(typeof(IPipeline<>), typeof(Pipeline<>));
+                    break;
+                }
+                default: break;
+            }
             _pipelinesAlreadySet = true;
         }
 
-        public void InjectPipelineInitializers()
+        public void InjectPipelineInitializers(InjectionLifetime? lifetime = null)
         {
+            lifetime ??= InjectionLifetime.Scoped;
             if (_initializersAlreadySet) return;
-            Services.AddScoped(typeof(IPipelineInitializer<>), typeof(PipelineInitializer<>));
+             
+            switch(lifetime)
+            {
+                case InjectionLifetime.Singleton:
+                {
+                    Services.AddSingleton(typeof(IPipelineInitializer<>), typeof(PipelineInitializer<>));
+                    break;
+                }
+                case InjectionLifetime.Scoped:
+                {
+                    Services.AddScoped(typeof(IPipelineInitializer<>), typeof(PipelineInitializer<>));
+                    break;
+                }
+                case InjectionLifetime.Transient:
+                {
+                    Services.AddTransient(typeof(IPipelineInitializer<>), typeof(PipelineInitializer<>));
+                    break;
+                }
+                default: break;
+            }
             _initializersAlreadySet = true;
         }
 
-        public void InjectPipelineBuilders()
+        public void InjectPipelineBuilders(InjectionLifetime? lifetime = null)
         {
+            lifetime ??= InjectionLifetime.Scoped;
             if (_buildersAlreadySet) return;
 
             var pipelineBuilders = from type in Types
@@ -107,8 +191,29 @@ namespace PipelineRD.Builders
                                    select new { Interface = matchingInterface, Type = type };
 
             foreach (var builder in pipelineBuilders)
-                Services.AddScoped(builder.Interface, builder.Type);
-
+            {
+                switch(lifetime)
+                {
+                    case InjectionLifetime.Singleton:
+                    {
+                        Services.AddSingleton(builder.Interface, builder.Type);
+                        break;
+                    }
+                    case InjectionLifetime.Scoped:
+                    {
+                        Services.AddScoped(builder.Interface, builder.Type);
+                        break;
+                    }
+                    case InjectionLifetime.Transient:
+                    {
+                        Services.AddTransient(builder.Interface, builder.Type);
+                        break;
+                    }
+                    default: break;
+                }
+            }
+                
+            
             _buildersAlreadySet = true;
         }
 
