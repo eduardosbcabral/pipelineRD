@@ -25,4 +25,8 @@
     <PackageReference Include="WebApi.Models" Version="1.1.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Enums\" />
+  </ItemGroup>
+
 </Project>
