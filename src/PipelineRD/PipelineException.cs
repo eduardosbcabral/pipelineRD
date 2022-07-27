@@ -1,13 +1,13 @@
-﻿using System;
+﻿namespace PipelineRD;
 
-namespace PipelineRD
+public class PipelineException : Exception
 {
-    public class PipelineException : Exception
-    {
-        public PipelineException(string message)
-            : base(message)
-        {
+    public HandlerResult Result { get; private set; }
 
-        }
+    public PipelineException(HandlerResult result)
+    {
+        this.Result = result;
     }
+
+    public PipelineException(string message) : base($"[PipelineRD] {message}") { }
 }

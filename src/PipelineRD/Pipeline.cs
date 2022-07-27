@@ -1,399 +1,259 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Threading.Tasks;
-
+﻿using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
-
-using PipelineRD.Async;
-using PipelineRD.Extensions;
 
 using Polly;
 
-using Serilog;
-using Serilog.Context;
+using System.Linq.Expressions;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 
-namespace PipelineRD
+using PipelineRD.Cache;
+
+namespace PipelineRD;
+
+public class Pipeline<TContext, TRequest> : IPipeline<TContext, TRequest> where TContext : BaseContext
 {
-    public class Pipeline<TContext> : IPipeline<TContext> where TContext : BaseContext
+    public Queue<Handler<TContext, TRequest>> Handlers { get; private set; }
+    public TContext Context { get; private set; }
+    private string Identifier => $"Pipeline<{typeof(TContext).Name}, {typeof(TRequest).Name}>";
+
+    private readonly IServiceProvider _serviceProvider;
+    private ICacheProvider _cacheProvider;
+    private bool _useCache;
+    private string _currentHandlerIdentifier;
+
+
+    public Pipeline(IServiceProvider serviceProvider, TContext context = null) : this()
     {
-        public TContext Context { get; private set; }
-        public string CurrentRequestStepIdentifier { get; private set; }
-        public virtual string Identifier => $"Pipeline<{typeof(TContext).Name}>";
-        public IReadOnlyCollection<IStep<TContext>> Steps => _requestSteps;
+        _serviceProvider = serviceProvider;
+        Context = context ?? serviceProvider.GetService<TContext>() ?? throw new PipelineException($"{typeof(TContext).Name} not found in the dependency container.");
+    }
 
-        protected readonly IServiceProvider _serviceProvider;
-        protected readonly ICacheProvider _cacheProvider;
-        protected string _requestKey;
-        protected bool _useReuseRequisitionHash;
-        protected bool _finallyStepIsSet = false;
-        protected readonly Queue<IStep<TContext>> _requestSteps;
-        protected readonly Stack<IRollbackStep<TContext>> _rollbacks;
+    protected Pipeline()
+    {
+        Handlers = new Queue<Handler<TContext, TRequest>>();
+    }
 
-        #region Constructors
-        private Pipeline()
+    public IPipeline<TContext, TRequest> EnableCache(ICacheProvider cacheProvider = null)
+    {
+        if(_serviceProvider.GetService<IDistributedCache>() == null)
         {
-            _useReuseRequisitionHash = true;
-            _rollbacks = new Stack<IRollbackStep<TContext>>();
-            _requestSteps = new Queue<IStep<TContext>>();
+            throw new PipelineException("IDistributedCache interface is not injected.");
         }
 
-        public Pipeline(IServiceProvider serviceProvider, string requestKey = null) : this()
-        {
-            _serviceProvider = serviceProvider;
-            _requestKey = requestKey;
-            _cacheProvider = serviceProvider.GetService<ICacheProvider>();
-            Context = serviceProvider.GetService<TContext>();
-        }
-        #endregion
+        _cacheProvider = (cacheProvider ?? _serviceProvider.GetService<ICacheProvider>()) ?? throw new PipelineException($"CacheProvider not found in the dependency container.");
+        _useCache = true;
+        return this;
+    }
 
-        public IServiceProvider GetServiceProvider() => _serviceProvider;
-        public void SetRequestKey(string requestKey) => _requestKey = requestKey;
+    public IPipeline<TContext, TRequest> DisableCache()
+    {
+        _useCache = false;
+        return this;
+    }
 
-        #region RecoveryRequestByHash
-        public IPipeline<TContext> EnableRecoveryRequestByHash()
-        {
-            _useReuseRequisitionHash = true;
-            return this;
-        }
+    public HandlerResult Execute(TRequest request)
+        => Execute(request, string.Empty, string.Empty);
 
-        public IPipeline<TContext> DisableRecoveryRequestByHash()
-        {
-            _useReuseRequisitionHash = false;
-            return this;
-        }
-        #endregion
+    public HandlerResult Execute(TRequest request, string idempotencyKey)
+        => Execute(request, idempotencyKey, string.Empty);
 
-        #region AddNext
-        public IPipeline<TContext> AddNext<TRequestStep>() where TRequestStep : IStep<TContext>
+    public HandlerResult Execute(TRequest request, string idempotencyKey, string initialHandlerIdentifier)
+    {
+        var hash = GetRequestHash(request, idempotencyKey);
+
+        initialHandlerIdentifier ??= string.Empty;
+
+        if (_useCache)
         {
-            if (_finallyStepIsSet)
+            var snapshot = _cacheProvider.Get<PipelineSnapshot<TContext>>(hash);
+            if (snapshot != null)
             {
-                throw new PipelineException("Finally request step is already set. Cannot add a new step.");
-            }
-
-            var requestStep = (IStep<TContext>)_serviceProvider.GetService<TRequestStep>();
-            if (requestStep == null)
-            {
-                throw new NullReferenceException("Request step not found.");
-            }
-
-            requestStep.SetPipeline(this);
-            requestStep.SetContext(Context);
-
-            _requestSteps.Enqueue(requestStep);
-
-            SetCurrentRequestStepIdentifier(requestStep);
-
-            return this;
-        }
-
-        public IPipeline<TContext> AddNext<TRequestStep>(IStep<TContext> requestStep) where TRequestStep : IStep<TContext>
-        {
-            if (requestStep == null)
-            {
-                throw new NullReferenceException("Request step cannot be null.");
-            }
-
-            if (_finallyStepIsSet)
-            {
-                throw new PipelineException("Finally request step is already set. Cannot add a new step.");
-            }
-
-            requestStep.SetPipeline(this);
-            requestStep.SetContext(Context);
-
-            _requestSteps.Enqueue(requestStep);
-
-            SetCurrentRequestStepIdentifier(requestStep);
-
-            return this;
-        }
-        #endregion
-
-        #region AddPolicy
-        public IPipeline<TContext> WithPolicy(Policy<RequestStepResult> policy)
-        {
-            var lastStepRequest = LastStep() as IRequestStep<TContext>;
-            if (policy != null && lastStepRequest != null)
-            {
-                lastStepRequest.Policy = policy;
-            }
-
-            return this;
-        }
-
-        public IPipeline<TContext> WithPolicy(AsyncPolicy<RequestStepResult> policy)
-        {
-            var lastStepRequest = LastStep() as IAsyncRequestStep<TContext>;
-            if (policy != null && lastStepRequest != null)
-            {
-                lastStepRequest.Policy = policy;
-            }
-
-            return this;
-        }
-        #endregion
-
-        #region When
-        public IPipeline<TContext> When(Expression<Func<TContext, bool>> condition)
-        {
-            var lastStep = LastStep();
-            if (condition != null && lastStep != null)
-            {
-                lastStep.ConditionToExecute = condition;
-            }
-
-            return this;
-        }
-
-        public IPipeline<TContext> When<TCondition>() where TCondition : ICondition<TContext>
-        {
-            var instance = (ICondition<TContext>)_serviceProvider.GetService<TCondition>();
-            if (instance == null)
-            {
-                throw new PipelineException("Could not find the condition. Try adding to the dependency injection container.");
-            }
-
-            return When(instance.When());
-        }
-        #endregion
-
-        #region AddRollback
-        public IPipeline<TContext> AddRollback<TRollbackRequestStep>() where TRollbackRequestStep : IRollbackStep<TContext>
-        {
-            var rollbackStep = (IRollbackStep<TContext>)_serviceProvider.GetService<TRollbackRequestStep>();
-            if (rollbackStep == null)
-            {
-                throw new NullReferenceException("Rollback request step not found.");
-            }
-
-            return AddRollback(rollbackStep);
-        }
-
-        public IPipeline<TContext> AddRollback(IRollbackStep<TContext> rollbackStep)
-        {
-            var lastStep = LastStep();
-            if (lastStep != null)
-            {
-                var rollbackIndex = _rollbacks.Count;
-                rollbackStep.AddRollbackIndex(rollbackIndex);
-                lastStep.AddRollbackIndex(rollbackIndex);
-                rollbackStep.ConditionToExecute = lastStep.ConditionToExecute;
-                rollbackStep.SetPipeline(this);
-                rollbackStep.SetContext(Context);
-                _rollbacks.Push(rollbackStep);
-            }
-
-            return this;
-        }
-
-        public async Task ExecuteRollback()
-        {
-            var remainingFirstStepThatHaveRollback = _requestSteps.FirstOrDefault(x => x.RollbackIndex.HasValue);
-
-            var executeRollbackUntilIndex = remainingFirstStepThatHaveRollback != null ?
-                remainingFirstStepThatHaveRollback.RollbackIndex :
-                _rollbacks.Count;
-
-            foreach(var rollbackStep in _rollbacks.Where(rollbackHandler => rollbackHandler.RollbackIndex < executeRollbackUntilIndex))
-            {
-                if(rollbackStep.GetType() == typeof(IAsyncRollbackRequestStep<TContext>))
+                if (snapshot.Success)
                 {
-                    await ((IAsyncRollbackRequestStep<TContext>)rollbackStep).Execute();
+                    return snapshot.Context.Result;
                 }
                 else
                 {
-                    ((IRollbackStep<TContext>)rollbackStep).Execute();
+                    Context = snapshot.Context;
+                    initialHandlerIdentifier = snapshot.HandlerIdentifier;
                 }
             }
         }
-        #endregion
 
-        #region AddFinally
-        public IPipeline<TContext> AddFinally<TRequestStep>() where TRequestStep : IStep<TContext>
+        var result = ExecutePipeline(request, initialHandlerIdentifier);
+
+        if (_useCache)
         {
-            AddNext<TRequestStep>();
-            _finallyStepIsSet = true;
-            return this;
-        }
-        #endregion
+            PipelineSnapshot<TContext> snapshot = new(
+                result.IsSuccess,
+                _currentHandlerIdentifier,
+                Context
+            );
 
-        #region Execute
-        public async Task<RequestStepResult> Execute<TRequest>(TRequest request)
-            => await Execute(request, string.Empty).ConfigureAwait(false);
-
-        public async Task<RequestStepResult> Execute<TRequest>(TRequest request, string idempotencyKey)
-        {
-            var headStep = HeadStep();
-            if (headStep == null)
-            {
-                throw new NullReferenceException("There are no steps in the pipeline.");
-            }
-
-            SetCurrentRequestStepIdentifier(headStep);
-
-            var hash = string.IsNullOrEmpty(idempotencyKey) ?
-                    request.GenerateHash(Identifier) :
-                    idempotencyKey;
-            var firstStepIdentifier = string.Empty;
-
-            if (_useReuseRequisitionHash)
-            {
-                var snapshot = await _cacheProvider.Get<PipelineSnapshot>(hash).ConfigureAwait(false);
-                if (snapshot != null)
-                {
-                    if (snapshot.Success)
-                    {
-                        return snapshot.Context.Response;
-                    }
-                    else
-                    {
-                        Context = (TContext)snapshot.Context;
-                        firstStepIdentifier = snapshot.LastRequestIdentifier;
-                    }
-                }
-            }
-
-            // Set the Request in the shared Context
-            Context.SetRequest(request);
-
-            var pipelineResult = await ExecutePipeline(firstStepIdentifier).ConfigureAwait(false);
-
-            if (pipelineResult == null)
-            {
-                throw new PipelineException("The pipeline did not returned a result. End the pipeline using the method 'Finish'.");
-            }
-
-            if (_useReuseRequisitionHash)
-            {
-                var snapshot = new PipelineSnapshot(
-                    pipelineResult.IsSuccess(),
-                    CurrentRequestStepIdentifier,
-                    Context);
-
-                await _cacheProvider.Add(snapshot, hash).ConfigureAwait(false);
-            }
-
-            return pipelineResult;
+            _cacheProvider.Add(snapshot, hash);
         }
 
-        public async Task<RequestStepResult> ExecuteFromSpecificRequestStep(string requestStepIdentifier)
-        {
-            if (CurrentRequestStepIdentifier.Equals(requestStepIdentifier, StringComparison.InvariantCultureIgnoreCase))
-            {
-                return await ExecuteNextRequestStep().ConfigureAwait(false);
-            }
+        return result;
+    }
 
-            DequeueCurrentStep();
-            SetCurrentRequestStepIdentifier(HeadStep());
-            return await ExecuteFromSpecificRequestStep(requestStepIdentifier).ConfigureAwait(false);
+    private HandlerResult ExecutePipeline(TRequest request, string initialHandlerIdentifier)
+    {
+        var handler = DequeueHandler();
+
+        // Return default result when pipeline does not have a handler
+        if (handler == null)
+        {
+            return GetResult();
         }
 
-        public async Task<RequestStepResult> ExecuteNextRequestStep() 
+        // Ensure that the Context is the same to all executed steps
+        handler.DefineContext(Context);
+
+        // If startHandlerIdentifier is empty, it means that did not use or find any snapshot cache
+        // The second condition means that will ignore the recursive right execution order until the current handler
+        // in execution is equal to the one that we got from the snapshot cache, and it will start from that
+        if (ExecuteInOrder() || ExecuteFromHandler())
         {
-            var currentStep = DequeueCurrentStep();
-            SetCurrentRequestStepIdentifier(currentStep);
-
-            if (currentStep.ConditionToExecute is null || currentStep.ConditionToExecute.Compile().Invoke(currentStep.Context))
-            {
-                RequestStepResult result;
-
-                if(currentStep.GetType().GetInterfaces().Any(x => x == typeof(IAsyncRequestStep<TContext>)))
-                {
-                    result = await ((IAsyncRequestStep<TContext>)currentStep).Execute().ConfigureAwait(false);
-                } 
-                else
-                {
-                    result = ((IRequestStep<TContext>)currentStep).Execute();
-                }
-
-                return result;
-            }
-
-            return await ExecuteNextRequestStep().ConfigureAwait(false);
+            ExecuteHandler();
+        }
+        // If it is not an ordered execution, it will check if the handler has a recovery
+        else if(!ExecuteInOrder() && HandlerHasRecovery())
+        {
+            ExecuteRecoveryHandler();
         }
 
-        private async Task<RequestStepResult> ExecuteStep(IAsyncRequestStep<TContext> step)
-            => await step.Execute().ConfigureAwait(false);
-
-        private RequestStepResult ExecuteStep(IRequestStep<TContext> step)
-            => step.Execute();
-        #endregion
-
-        #region Protected Methods
-        private async Task<RequestStepResult> ExecutePipeline(string firstStepIdentifier)
+        return IsFinished() switch
         {
-            RequestStepResult pipelineResult = null;
+            true => GetResult(),
+            false => ExecutePipeline(request, initialHandlerIdentifier)
+        };
 
-            try
-            {
-                if (!string.IsNullOrEmpty(firstStepIdentifier))
-                {
-                    pipelineResult = await ExecuteFromSpecificRequestStep(firstStepIdentifier).ConfigureAwait(false);
-                }
-                else
-                {
-                    pipelineResult = await ExecuteNextRequestStep().ConfigureAwait(false);
-                }
-            }
-            catch (PipelinePolicyException pipelinePolicyException)
-            {
-                pipelineResult = pipelinePolicyException.Result;
-            }
-            catch (Exception ex)
-            {
-                if (Log.Logger != null)
-                {
-                    using (LogContext.PushProperty("RequestKey", _requestKey))
-                    {
-                        Log.Logger.Error(ex, $"Error - {CurrentRequestStepIdentifier}");
-                    }
-                }
+        bool ExecuteInOrder()
+            => initialHandlerIdentifier == string.Empty;
 
-                throw ex;
-            }
-            finally
-            {
-                if (_finallyStepIsSet) {
-                    pipelineResult = await ExecuteFinallyHandler().ConfigureAwait(false);
-                }
-            }
-
-            return pipelineResult;
-        }
-
-        private async Task<RequestStepResult> ExecuteFinallyHandler()
+        bool ExecuteFromHandler()
         {
-            RequestStepResult result = null;
-
-            var lastStep = LastStep();
-            if (lastStep != null)
-            {
-                if (lastStep.GetType() == typeof(IAsyncRequestStep<TContext>))
-                {
-                    result = await ((IAsyncRequestStep<TContext>)lastStep).Execute().ConfigureAwait(false);
-                }
-                else
-                {
-                    result = ((IRequestStep<TContext>)lastStep).Execute();
-                }
-            }
-
+            var result = initialHandlerIdentifier == handler.Identifier;
+            // Reset the initial handler identifier to execute the next steps
+            // in order if not empty
+            if (result)
+                initialHandlerIdentifier = string.Empty;
             return result;
         }
 
-        protected IStep<TContext> LastStep() => _requestSteps.LastOrDefault();
-        protected IStep<TContext> HeadStep() => _requestSteps.FirstOrDefault();
-        private IStep<TContext> DequeueCurrentStep()
-            => _requestSteps.Dequeue();
-
-        private void SetCurrentRequestStepIdentifier(IStep<TContext> step)
+        void ExecuteHandler()
         {
-            CurrentRequestStepIdentifier = step.Identifier;
+            // Execute step based on condition if defined
+            if (handler.Condition is null || handler.Condition.Compile().Invoke(handler.Context))
+            {
+                if(handler.Policy != null)
+                {
+                    handler.Policy.Execute(() =>
+                    {
+                        handler.Handle(request);
+                        return handler.Result ?? new();
+                    });
+                }
+                else
+                {
+                    handler.Handle(request);
+                }
+            }
         }
-        #endregion
+
+        bool HandlerHasRecovery()
+            => handler.RecoveryHandler != null;
+
+        void ExecuteRecoveryHandler()
+        {
+            handler.RecoveryHandler.Handle(request);
+        }
+    }
+
+    public string GetRequestHash(TRequest request, string idempotencyKey)
+    {
+        return string.IsNullOrEmpty(idempotencyKey) ?
+            GenerateRequestHash(request) :
+            idempotencyKey;
+
+        string GenerateRequestHash(TRequest request)
+        {
+            var requestString = $"{Identifier}: {RequestToString(request)}";
+            var encoding = new ASCIIEncoding();
+            var key = encoding.GetBytes("072e77e426f92738a72fe23c4d1953b4");
+            var hmac = new HMACSHA1(key);
+            var bytes = hmac.ComputeHash(encoding.GetBytes(requestString));
+            return Convert.ToBase64String(bytes);
+        }
+
+        static string RequestToString(TRequest request)
+            => JsonSerializer.Serialize(request);
+    }
+
+    public IPipeline<TContext, TRequest> When(Expression<Func<TContext, bool>> condition)
+    {
+        var step = Handlers.LastOrDefault();
+        if (step != null)
+        {
+            step.DefineConditionToExecution(condition);
+        }
+        return this;
+    }
+
+    public IPipeline<TContext, TRequest> WithHandler<THandler>() where THandler : Handler<TContext, TRequest>
+    {
+        var handler = _serviceProvider.GetService<THandler>() ?? throw new PipelineException($"{typeof(THandler).Name} not found in the dependency container.");
+        return WithHandler(handler);
+    }
+
+    public IPipeline<TContext, TRequest> WithHandler(Handler<TContext, TRequest> handler)
+    {
+        handler.DefineContext(Context);
+        Handlers.Enqueue(handler);
+        return this;
+    }
+
+    public IPipeline<TContext, TRequest> WithPolicy(Policy<HandlerResult> policy)
+    {
+        var step = Handlers.LastOrDefault();
+        if (policy != null && step != null)
+        {
+            step.DefinePolicy(policy);
+        }
+
+        return this;
+    }
+
+    public IPipeline<TContext, TRequest> WithRecovery<TRecoveryHandler>() where TRecoveryHandler : RecoveryHandler<TContext, TRequest>
+    {
+        var handler = _serviceProvider.GetService<TRecoveryHandler>() ?? throw new PipelineException($"Recovery {typeof(TRecoveryHandler).Name} not found in the dependency container.");
+        return WithRecovery(handler);
+    }
+
+    public IPipeline<TContext, TRequest> WithRecovery(RecoveryHandler<TContext, TRequest> recoveryHandler)
+    {
+        var handler = Handlers.LastOrDefault();
+        if (recoveryHandler != null && handler != null)
+        {
+            recoveryHandler.DefineContext(Context);
+            handler.DefineRecovery(recoveryHandler);
+        }
+
+        return this;
+    }
+
+    private HandlerResult GetResult()
+     => Context.Result ?? HandlerResult.NoResult();
+
+    private bool IsFinished()
+        => !Handlers.Any() || Context.Result != null;
+
+    private Handler<TContext, TRequest> DequeueHandler()
+    {
+        var handler = Handlers.Dequeue();
+        _currentHandlerIdentifier = handler.Identifier;
+        return handler;
     }
 }

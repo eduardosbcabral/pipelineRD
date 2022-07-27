@@ -1,8 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
+using PipelineRD.Cache;
 using PipelineRD.Extensions;
-using PipelineRD.Settings;
-using PipelineRD.Tests.Conditions;
 
 namespace PipelineRD.Tests
 {
@@ -10,13 +9,15 @@ namespace PipelineRD.Tests
     {
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddDistributedMemoryCache();
+
             services.UsePipelineRD(x =>
             {
-                x.UseCacheInMemory(new MemoryCacheSettings());
+                var cacheSettings = new PipelineRDCacheSettings();
+
+                x.UseCache(cacheSettings);
                 x.AddPipelineServices(x => x.InjectAll());
             });
-
-            services.AddSingleton<ISampleCondition, SampleCondition>();
         }
     }
 }
