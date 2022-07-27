@@ -1,23 +1,11 @@
-﻿using System.Text.Json.Serialization;
+﻿namespace PipelineRD;
 
-namespace PipelineRD
+public class BaseContext
 {
-    [JsonConverter(typeof(ContextConverter))]
-    public abstract class BaseContext
+    public HandlerResult Result { get; set; }
+
+    public BaseContext()
     {
-        public string Id { get; set; }
-        public object PipelineRequest { get; set; }
-        public RequestStepResult Response { get; set; }
 
-        public BaseContext()
-        {
-            Id = ToString();
-        }
-
-        public void SetRequest(object request)
-            => PipelineRequest = request;
-
-        public TRequest Request<TRequest>()
-            => (TRequest)PipelineRequest;
     }
 }

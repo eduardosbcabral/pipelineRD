@@ -1,53 +1,27 @@
-﻿using Polly;
+﻿using PipelineRD.Cache;
 
-using System;
-using System.Collections.Generic;
+using Polly;
+
 using System.Linq.Expressions;
-using System.Threading.Tasks;
 
-namespace PipelineRD
+namespace PipelineRD;
+
+public interface IPipeline<TContext, TRequest> where TContext : BaseContext
 {
-    public interface IPipeline<TContext> where TContext : BaseContext
-    {
-        TContext Context { get; }
-        string CurrentRequestStepIdentifier { get; }
-        string Identifier { get; }
-        IReadOnlyCollection<IStep<TContext>> Steps { get; }
-        void SetRequestKey(string requestKey);
-        IServiceProvider GetServiceProvider();
+    Queue<Handler<TContext, TRequest>> Handlers { get; }
+    TContext Context { get; }
 
-        #region RecoveryHash
-        IPipeline<TContext> EnableRecoveryRequestByHash();
-        IPipeline<TContext> DisableRecoveryRequestByHash();
-        #endregion
+    IPipeline<TContext, TRequest> EnableCache(ICacheProvider cacheProvider = null);
+    IPipeline<TContext, TRequest> DisableCache();
 
-        #region Execute
-        Task<RequestStepResult> Execute<TRequest>(TRequest request);
-        Task<RequestStepResult> Execute<TRequest>(TRequest request, string idempotencyKey);
-        #endregion
+    IPipeline<TContext, TRequest> WithHandler<THandler>() where THandler : Handler<TContext, TRequest>;
+    IPipeline<TContext, TRequest> WithHandler(Handler<TContext, TRequest> handler);
+    IPipeline<TContext, TRequest> WithRecovery<THandler>() where THandler : RecoveryHandler<TContext, TRequest>;
+    IPipeline<TContext, TRequest> WithRecovery(RecoveryHandler<TContext, TRequest> handler);
+    IPipeline<TContext, TRequest> When(Expression<Func<TContext, bool>> condition);
+    IPipeline<TContext, TRequest> WithPolicy(Policy<HandlerResult> policy);
+    HandlerResult Execute(TRequest request);
+    HandlerResult Execute(TRequest request, string idempotencyKey);
 
-        #region AddNext
-        IPipeline<TContext> AddNext<TRequestStep>() where TRequestStep : IStep<TContext>;
-        IPipeline<TContext> AddNext<TRequestStep>(IStep<TContext> step) where TRequestStep : IStep<TContext>;
-        #endregion
-
-        #region AddPolicy
-        IPipeline<TContext> WithPolicy(Policy<RequestStepResult> policy);
-        IPipeline<TContext> WithPolicy(AsyncPolicy<RequestStepResult> policy);
-        #endregion
-
-        #region AddCondition
-        IPipeline<TContext> When(Expression<Func<TContext, bool>> condition);
-        IPipeline<TContext> When<TCondition>() where TCondition : ICondition<TContext>;
-            #endregion
-
-            #region AddRollback
-        IPipeline<TContext> AddRollback(IRollbackStep<TContext> rollbackStep);
-        IPipeline<TContext> AddRollback<TRollbackRequestStep>() where TRollbackRequestStep : IRollbackStep<TContext>;
-        #endregion
-
-        #region AddFinally
-        IPipeline<TContext> AddFinally<TRequestStep>() where TRequestStep : IStep<TContext>;
-        #endregion
-    }
+    string GetRequestHash(TRequest request, string idempotencyKey);
 }

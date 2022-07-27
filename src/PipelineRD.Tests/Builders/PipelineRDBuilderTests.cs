@@ -2,8 +2,8 @@
 
 using Microsoft.Extensions.DependencyInjection;
 
+using PipelineRD.Cache;
 using PipelineRD.Extensions;
-using PipelineRD.Settings;
 
 using System;
 using System.Linq;
@@ -22,35 +22,16 @@ namespace PipelineRD.Tests.Builders
 
             services.UsePipelineRD(x =>
             {
-                x.UseCacheInMemory(new MemoryCacheSettings());
+                x.UseCache(new PipelineRDCacheSettings());
             });
 
             var provider = services.BuildServiceProvider();
 
-            var cacheSettings = provider.GetService<ICacheSettings>();
+            var cacheSettings = provider.GetService<IPipelineRDCacheSettings>();
             var cacheProvider = provider.GetService<ICacheProvider>();
             Assert.NotNull(cacheSettings);
             Assert.NotNull(cacheProvider);
-            Assert.IsType<MemoryCacheSettings>(cacheSettings);
-        }
-
-        [Fact]
-        public void Should_UsePipelineRD_And_UseCacheInRedis()
-        {
-            var services = new ServiceCollection();
-
-            services.UsePipelineRD(x =>
-            {
-                x.UseCacheInRedis(new RedisCacheSettings());
-            });
-
-            var provider = services.BuildServiceProvider();
-
-            var cacheSettings = provider.GetService<ICacheSettings>();
-            var cacheProvider = provider.GetService<ICacheProvider>();
-            Assert.NotNull(cacheSettings);
-            Assert.NotNull(cacheProvider);
-            Assert.IsType<RedisCacheSettings>(cacheSettings);
+            Assert.IsType<PipelineRDCacheSettings>(cacheSettings);
         }
 
         [Fact]
@@ -60,24 +41,19 @@ namespace PipelineRD.Tests.Builders
 
             services.UsePipelineRD(x =>
             {
-                x.UseCacheInMemory(new MemoryCacheSettings());
+                x.UseCache(new PipelineRDCacheSettings());
                 x.AddPipelineServices(x => x.InjectAll());
             });
            
             var provider = services.BuildServiceProvider();
 
             var context = provider.GetService<PipelineRDContextTest>();
-            var step = provider.GetService<IPipelineRDTestStep>();
-            var rollbackStep = provider.GetService<IPipelineRDTestRollbackStep>();
-            var pipeline = provider.GetService<IPipeline<PipelineRDContextTest>>();
-            var initializer = provider.GetService<IPipelineInitializer<PipelineRDContextTest>>();
-            var builder = provider.GetService<IPipelineBuilder<PipelineRDContextTest>>();
+            var step = provider.GetService<PipelineRDTestStep>();
+            var pipeline = provider.GetService<IPipeline<PipelineRDContextTest, PipelineRDRequestTest>>();
+
             Assert.NotNull(context);
             Assert.NotNull(step);
-            Assert.NotNull(rollbackStep);
             Assert.NotNull(pipeline);
-            Assert.NotNull(initializer);
-            Assert.NotNull(builder);
         }
 
         [Fact]
@@ -87,7 +63,7 @@ namespace PipelineRD.Tests.Builders
 
             services.UsePipelineRD(x =>
             {
-                x.UseCacheInMemory(new MemoryCacheSettings());
+                x.UseCache(new PipelineRDCacheSettings());
                 x.AddPipelineServices(x => x.InjectContexts());
             });
 
@@ -106,13 +82,13 @@ namespace PipelineRD.Tests.Builders
 
             services.UsePipelineRD(x =>
             {
-                x.UseCacheInMemory(new MemoryCacheSettings());
-                x.AddPipelineServices(x => x.InjectSteps());
+                x.UseCache(new PipelineRDCacheSettings());
+                x.AddPipelineServices(x => x.InjectHandlers());
             });
 
             var provider = services.BuildServiceProvider();
 
-            var service = services.FirstOrDefault(x => x.ServiceType == typeof(IPipelineRDTestStep));
+            var service = services.FirstOrDefault(x => x.ServiceType == typeof(PipelineRDTestStep));
 
             Assert.NotNull(service);
             Assert.Equal(ServiceLifetime.Scoped, service.Lifetime);
@@ -125,51 +101,13 @@ namespace PipelineRD.Tests.Builders
 
             services.UsePipelineRD(x =>
             {
-                x.UseCacheInMemory(new MemoryCacheSettings());
+                x.UseCache(new PipelineRDCacheSettings());
                 x.AddPipelineServices(x => x.InjectPipelines());
             });
 
             var provider = services.BuildServiceProvider();
 
-            var service = services.FirstOrDefault(x => x.ServiceType == typeof(IPipeline<>));
-
-            Assert.NotNull(service);
-            Assert.Equal(ServiceLifetime.Scoped, service.Lifetime);
-        }
-
-        [Fact]
-        public void Should_UsePipelineRD_AddPipelineServices_And_Check_If_IPipelineInitializer_Is_Scoped()
-        {
-            var services = new ServiceCollection();
-
-            services.UsePipelineRD(x =>
-            {
-                x.UseCacheInMemory(new MemoryCacheSettings());
-                x.AddPipelineServices(x => x.InjectPipelineInitializers());
-            });
-
-            var provider = services.BuildServiceProvider();
-
-            var service = services.FirstOrDefault(x => x.ServiceType == typeof(IPipelineInitializer<>));
-
-            Assert.NotNull(service);
-            Assert.Equal(ServiceLifetime.Scoped, service.Lifetime);
-        }
-
-        [Fact]
-        public void Should_UsePipelineRD_AddPipelineServices_And_Check_If_IPipelineBuilder_Is_Scoped()
-        {
-            var services = new ServiceCollection();
-
-            services.UsePipelineRD(x =>
-            {
-                x.UseCacheInMemory(new MemoryCacheSettings());
-                x.AddPipelineServices(x => x.InjectPipelineBuilders());
-            });
-
-            var provider = services.BuildServiceProvider();
-
-            var service = services.FirstOrDefault(x => x.ServiceType == typeof(IPipelineBuilder<PipelineRDContextTest>));
+            var service = services.FirstOrDefault(x => x.ServiceType == typeof(IPipeline<,>));
 
             Assert.NotNull(service);
             Assert.Equal(ServiceLifetime.Scoped, service.Lifetime);
@@ -181,37 +119,15 @@ namespace PipelineRD.Tests.Builders
             var services = new ServiceCollection();
             Assert.Throws<ArgumentNullException>(() => services.UsePipelineRD(x => { }));
         }
+    }
 
-        [Fact]
-        public void Should_Generate_Documentation()
+    class PipelineRDTestStep : Handler<PipelineRDContextTest, PipelineRDRequestTest>
+    {
+        public override void Handle(PipelineRDRequestTest request)
         {
-            var services = new ServiceCollection();
 
-            services.UsePipelineRD(x =>
-            {
-                x.UseCacheInMemory(new MemoryCacheSettings());
-                x.AddPipelineServices(x => x.InjectAll());
-                x.UseDocumentation("PipelineRD.Sample", x =>
-                {
-                    x.UsePath(@"C:\dev\docs");
-                });
-            });
         }
     }
-
-    class PipelineRDTestStep : RequestStep<PipelineRDContextTest>, IPipelineRDTestStep
-    {
-        public override RequestStepResult HandleRequest() => Next();
-    }
-
-    class PipelineRDRTestRollbackStep : RollbackRequestStep<PipelineRDContextTest>, IPipelineRDTestRollbackStep
-    {
-        public override void HandleRollback() { }
-    }
-
-    interface IPipelineRDTestStep : IRequestStep<PipelineRDContextTest> { }
-
-    interface IPipelineRDTestRollbackStep : IRollbackStep<PipelineRDContextTest> { }
 
     class PipelineRDContextTest : BaseContext { public bool Valid { get; set; } }
 
@@ -219,36 +135,11 @@ namespace PipelineRD.Tests.Builders
 
     class PipelineRDRequestTestValidator : AbstractValidator<PipelineRDRequestTest> { }
 
-    class PipelineRDBuilderTest : IPipelineBuilder<PipelineRDContextTest>
+    class FirstTestStep : Handler<PipelineRDContextTest, PipelineRDRequestTest>
     {
-        public IPipelineInitializer<PipelineRDContextTest> Pipeline { get; }
+        public override void Handle(PipelineRDRequestTest request)
+        {
 
-        public PipelineRDBuilderTest(IPipelineInitializer<PipelineRDContextTest> pipeline) => Pipeline = pipeline;
-
-        public async Task<RequestStepResult> CreateTest(PipelineRDRequestTest request)
-            => await Pipeline
-                .Initialize()
-                .AddNext<IFirstTestStep>()
-                .AddNext<IFirstTestStep>()
-                .AddNext<IFirstTestStep>()
-                .AddNext<IFirstTestStep>()
-                .Execute(request);
+        }
     }
-
-    class PipelineRDBuilderTwoTest : IPipelineRDBuilderTwoTest
-    {
-        public IPipelineInitializer<PipelineRDContextTest> Pipeline { get; }
-
-        public PipelineRDBuilderTwoTest(IPipelineInitializer<PipelineRDContextTest> pipeline) => Pipeline = pipeline;
-    }
-
-    interface IPipelineRDBuilderTwoTest : IPipelineBuilder<PipelineRDContextTest>
-    { }
-
-    class FirstTestStep : RequestStep<PipelineRDContextTest>, IFirstTestStep
-    {
-        public override RequestStepResult HandleRequest() => this.Next();
-    }
-
-    interface IFirstTestStep : IRequestStep<PipelineRDContextTest> { }
 }
