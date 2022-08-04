@@ -45,62 +45,43 @@ stages:
     # It will update the pipeline build version based on the reason of the trigger.
     # If it is a tag trigger, it will set the build version as the git tag version.
     - bash: |
-        if [[ "$(Build.SourceBranch)" =~ "/feature/" ]] ||
-           [[ "$(Build.SourceBranch)" =~ "/bugfix/" ]]; 
+        if [[ "$(Build.SourceBranch)" =~ "/tags/" ]];
         then
+          version=`sed 's/v//g' <<< $BUILD_SOURCEBRANCHNAME`
+          echo "Generate Release Version"
+          echo "Version: $version"
+          echo "##vso[task.setvariable variable=DeployType;isOutput=true]production"
+          echo "##vso[task.setvariable variable=PublishDockerImage;isOutput=true]true"
+          echo "##vso[task.setvariable variable=PackingNuget;isOutput=true]true"
+          echo "##vso[task.setvariable variable=PackageVersion;isOutput=true]$version"
+          echo "##vso[task.setvariable variable=IsRelease;isOutput=true]true"
+          echo "##vso[build.updatebuildnumber]$version"
+        else
           echo "Generate Development Version"
-
           staging_tag=`echo "${{ parameters.STAGING_TAG }}" | xargs`
-
           if [[ -z "$staging_tag" ]]
           then
             version=`echo "$BUILD_SOURCEVERSIONMESSAGE" | grep -oP '[\[]staging v?\d+.\d+.\d+[\]]' | grep -oP '\d+.\d+.\d+'`
           else
             version=`echo "$staging_tag" | grep -oP '\d+.\d+.\d+'`
           fi
-
           if [[ -z "$version" ]];
           then
-              echo "Version: $(Build.BuildNumber)"
-              echo "##vso[task.setvariable variable=PackingNuget;isOutput=true]false"
+            echo "Version: $(Build.BuildNumber)"
+            echo "##vso[task.setvariable variable=PublishDockerImage;isOutput=true]false"
+            echo "##vso[task.setvariable variable=PackingNuget;isOutput=true]false"
           else
-              echo "Version: $version-alpha.$(Build.BuildNumber)"
-              echo "Force alpha development enabled!"
-              echo "##vso[task.setvariable variable=PackingNuget;isOutput=true]true"
-              echo "##vso[task.setvariable variable=PackageVersion;isOutput=true]$version-alpha.$(Build.BuildNumber)"
-              echo "##vso[build.updatebuildnumber]$version-alpha.$(Build.BuildNumber)"
+            echo "Version: $version-alpha.$(Build.BuildNumber)"
+            echo "Force staging enabled!"
+            echo "##vso[task.setvariable variable=DeployType;isOutput=true]staging"
+            echo "##vso[task.setvariable variable=PublishDockerImage;isOutput=true]true"
+            echo "##vso[task.setvariable variable=PackingNuget;isOutput=true]true"
+            echo "##vso[task.setvariable variable=PackageVersion;isOutput=true]$version-alpha.$(Build.BuildNumber)"
+            echo "##vso[build.updatebuildnumber]$version-alpha.$(Build.BuildNumber)"
           fi
-        elif [[ "$(Build.SourceBranch)" =~ "/tags/" ]];
-        then
-          version=`sed 's/v//g' <<< $BUILD_SOURCEBRANCHNAME`
-          echo "Generate Release Version"
-          echo "Version: $(Build.SourceBranchName)"
-          echo "##vso[task.setvariable variable=PackingNuget;isOutput=true]true"
-          echo "##vso[task.setvariable variable=PackageVersion;isOutput=true]$version"
-          echo "##vso[task.setvariable variable=IsRelease;isOutput=true]true"
-          echo "##vso[build.updatebuildnumber]$version"
         fi
       displayName: Update Version Number
       name: UpdateBuildVersionNumberTask
-    # Get the previous build status and check if the returned XML from curl request
-    # has a string 'succeeded' and if it is not ok, it will stop the execution of current build 
-    # It will execute it just when the trigger is a tag.
-    # - bash: |
-    #     STAGING_URL="$(System. CollectionUri)/$(System.TeamProject)/_apis/build/status/$(System.DefinitionId)?branchName=$(UpdateBuildVersionTask.PreviousPrefix)/$(Build.BuildNumber)&stageName=DeployPackage"
-    #     STAGING_RESULT=$`curl --silent $STAGING_URL`
-    #     echo "URL: $STAGING_URL" 
-    #     echo "RESULT: $STAGING_RESULT"
-    #     SUCCEEDED=$`echo $STAGING_RESULT | grep -P 'succeeded' -o | head -n 1`
-    #     if [[ "$STAGING_RESULT" =~ "succeeded" ]];
-    #     then
-    #         echo "$PREVIOUS_PREFIX branch is ok!"
-    #     else
-    #         echo "$PREVIOUS_PREFIX branch is not ok!"
-    #         exit 1
-    #     fi
-    #   condition: contains(variables['Build.SourceBranch'], '/tags/')
-    #   displayName: 'Break if release branch is not passing'
-    #   name: BreakIsReleaseNotPassing
     - bash: env
       displayName: Show environment variables
   - job: 'Build'
