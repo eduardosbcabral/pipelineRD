@@ -82,7 +82,7 @@ namespace PipelineRD.Tests
             var pipeline = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
             pipeline.WithHandler<FirstSampleHandler>();
             pipeline.WithHandler<SecondSampleHandler>()
-                .When(x => x.ValidSecond);
+                .When((x, _) => x.ValidSecond);
             pipeline.WithHandler<ThirdSampleHandler>();
 
             var result = pipeline.Execute(request);
@@ -98,7 +98,7 @@ namespace PipelineRD.Tests
             var pipeline = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
             pipeline.WithHandler<FirstSampleHandler>();
             pipeline.WithHandler<SecondSampleHandler>()
-                .When(x => x.ValidSecond == true);
+                .When((x, _) => x.ValidSecond == true);
             pipeline.WithHandler<ThirdSampleHandler>();
 
             pipeline.Context.ValidSecond = false;

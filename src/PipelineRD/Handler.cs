@@ -8,7 +8,7 @@ namespace PipelineRD;
 public abstract class Handler<TContext, TRequest> where TContext : BaseContext
 {
     public TContext Context { get; private set; }
-    public Expression<Func<TContext, bool>> Condition { get; private set; }
+    public Expression<Func<TContext, TRequest, bool>> Condition { get; private set; }
     public Policy<HandlerResult> Policy { get; private set; }
     public RecoveryHandler<TContext, TRequest> RecoveryHandler { get; private set; }
     public string Identifier => $"({typeof(TContext).Name}, {typeof(TRequest).Name}).{GetType().Name}";
@@ -70,7 +70,7 @@ public abstract class Handler<TContext, TRequest> where TContext : BaseContext
     public void DefineContext(TContext context)
         => Context = context;
 
-    public void DefineConditionToExecution(Expression<Func<TContext, bool>> condition)
+    public void DefineConditionToExecution(Expression<Func<TContext, TRequest, bool>> condition)
         => Condition = condition;
 
     public void DefinePolicy(Policy<HandlerResult> policy)

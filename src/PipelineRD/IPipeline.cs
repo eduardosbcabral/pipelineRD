@@ -18,7 +18,7 @@ public interface IPipeline<TContext, TRequest> where TContext : BaseContext
     IPipeline<TContext, TRequest> WithHandler(Handler<TContext, TRequest> handler);
     IPipeline<TContext, TRequest> WithRecovery<THandler>() where THandler : RecoveryHandler<TContext, TRequest>;
     IPipeline<TContext, TRequest> WithRecovery(RecoveryHandler<TContext, TRequest> handler);
-    IPipeline<TContext, TRequest> When(Expression<Func<TContext, bool>> condition);
+    IPipeline<TContext, TRequest> When(Expression<Func<TContext, TRequest, bool>> condition);
     IPipeline<TContext, TRequest> WithPolicy(Policy<HandlerResult> policy);
     HandlerResult Execute(TRequest request);
     HandlerResult Execute(TRequest request, string idempotencyKey);

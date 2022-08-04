@@ -146,7 +146,7 @@ public class Pipeline<TContext, TRequest> : IPipeline<TContext, TRequest> where 
         void ExecuteHandler()
         {
             // Execute step based on condition if defined
-            if (handler.Condition is null || handler.Condition.Compile().Invoke(handler.Context))
+            if (handler.Condition is null || handler.Condition.Compile().Invoke(handler.Context, request))
             {
                 if(handler.Policy != null)
                 {
@@ -192,7 +192,7 @@ public class Pipeline<TContext, TRequest> : IPipeline<TContext, TRequest> where 
             => JsonSerializer.Serialize(request);
     }
 
-    public IPipeline<TContext, TRequest> When(Expression<Func<TContext, bool>> condition)
+    public IPipeline<TContext, TRequest> When(Expression<Func<TContext, TRequest, bool>> condition)
     {
         var step = Handlers.LastOrDefault();
         if (step != null)
