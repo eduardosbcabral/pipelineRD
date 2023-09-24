@@ -21,8 +21,8 @@ public class HandlerResult
     public static HandlerResult BadRequest(params HandlerError[] errors)
         => new()
         {
-            StatusCode = HttpStatusCode.BadRequest,
-            Errors = errors.ToList()
+            Errors = errors.ToList(),
+            StatusCode = HttpStatusCode.BadRequest
         };
 
     public static HandlerResult NoResult()
@@ -38,7 +38,7 @@ public class HandlerResult
     public static HandlerResult InternalServerError(params HandlerError[] errors)
         => new()
         {
-            Result = result,
+            Errors = errors.ToList(),
             StatusCode = HttpStatusCode.InternalServerError
         };
 }

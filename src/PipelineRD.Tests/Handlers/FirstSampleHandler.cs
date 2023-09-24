@@ -5,15 +5,16 @@ namespace PipelineRD.Tests.Handlers
 {
     public class FirstSampleHandler : Handler<ContextSample, SampleRequest>
     {
-        public override async Task Handle(SampleRequest request)
+        public override Task Handle(SampleRequest request)
         {
             if (!request.ValidFirst)
             {
-                this.Abort("Error", 400);
-                return;
+                Abort("Error", 400);
+                return Task.CompletedTask;
             }
 
             this.Context.FirstWasExecuted = true;
+            return Task.CompletedTask;
         }
     }
 }

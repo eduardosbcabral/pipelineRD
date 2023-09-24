@@ -14,8 +14,8 @@ public class CacheProvider : ICacheProvider
 
     public CacheProvider(IPipelineRDCacheSettings cacheSettings, IDistributedCache distributedCache)
     {
-        _cacheSettings = cacheSettings ?? throw new ArgumentNullException(nameof(cacheSettings));
-        _distributedCache = distributedCache ?? throw new ArgumentNullException(nameof(distributedCache), "Cache needs to be a distributed one.");
+        _cacheSettings = cacheSettings ?? throw new PipelineException("Interface IPipelineRDCacheSettings is not configured.");
+        _distributedCache = distributedCache ?? throw new PipelineException("Interface IDistributedCache is not configured.");
         _serializerOptions = new JsonSerializerOptions();
     }
 

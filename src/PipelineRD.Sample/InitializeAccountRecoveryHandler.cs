@@ -2,8 +2,9 @@
 
 class InitializeAccountRecoveryHandler : RecoveryHandler<AccountContext, AccountRequest>
 {
-    public override async Task Handle(AccountRequest request)
+    public override Task Handle(AccountRequest request)
     {
+        return Proceed();
     }
 }
 

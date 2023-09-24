@@ -21,7 +21,7 @@ namespace PipelineRD.Tests.Builders
 
             services.UsePipelineRD(x =>
             {
-                x.UseCache(new PipelineRDCacheSettings());
+                x.SetupCache(new PipelineRDCacheSettings());
             });
 
             var provider = services.BuildServiceProvider();
@@ -40,8 +40,8 @@ namespace PipelineRD.Tests.Builders
 
             services.UsePipelineRD(x =>
             {
-                x.UseCache(new PipelineRDCacheSettings());
-                x.AddPipelineServices(x => x.InjectAll());
+                x.SetupCache(new PipelineRDCacheSettings());
+                x.SetupPipelineServices(x => x.InjectAll());
             });
 
             var provider = services.BuildServiceProvider();
@@ -62,8 +62,8 @@ namespace PipelineRD.Tests.Builders
 
             services.UsePipelineRD(x =>
             {
-                x.UseCache(new PipelineRDCacheSettings());
-                x.AddPipelineServices(x => x.InjectContexts());
+                x.SetupCache(new PipelineRDCacheSettings());
+                x.SetupPipelineServices(x => x.InjectContexts());
             });
 
             var provider = services.BuildServiceProvider();
@@ -81,8 +81,8 @@ namespace PipelineRD.Tests.Builders
 
             services.UsePipelineRD(x =>
             {
-                x.UseCache(new PipelineRDCacheSettings());
-                x.AddPipelineServices(x => x.InjectHandlers());
+                x.SetupCache(new PipelineRDCacheSettings());
+                x.SetupPipelineServices(x => x.InjectHandlers());
             });
 
             var provider = services.BuildServiceProvider();
@@ -100,8 +100,8 @@ namespace PipelineRD.Tests.Builders
 
             services.UsePipelineRD(x =>
             {
-                x.UseCache(new PipelineRDCacheSettings());
-                x.AddPipelineServices(x => x.InjectPipelines());
+                x.SetupCache(new PipelineRDCacheSettings());
+                x.SetupPipelineServices(x => x.InjectPipelines());
             });
 
             var provider = services.BuildServiceProvider();
@@ -115,9 +115,9 @@ namespace PipelineRD.Tests.Builders
 
     class PipelineRDTestStep : Handler<PipelineRDContextTest, PipelineRDRequestTest>
     {
-        public override async Task Handle(PipelineRDRequestTest request)
+        public override Task Handle(PipelineRDRequestTest request)
         {
-
+            return Task.CompletedTask;
         }
     }
 

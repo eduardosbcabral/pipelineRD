@@ -20,18 +20,15 @@ public class PipelineRDBuilder : IPipelineRDBuilder
         _services = services;
     }
 
-    public void UseCache(IPipelineRDCacheSettings cacheSettings)
+    public void SetupCache(IPipelineRDCacheSettings cacheSettings)
     {
         _services.AddSingleton(cacheSettings);
         _services.AddSingleton<ICacheProvider, CacheProvider>();
     }
 
-    public void AddPipelineServices(Action<IPipelineServicesBuilder> configure)
+    public void SetupPipelineServices(Action<IPipelineServicesBuilder> configure)
     {
-        if (_types == null)
-        {
-            _types = GetTypes();
-        }
+        _types ??= GetTypes();
 
         var builder = new PipelineServicesBuilder(_types, _services);
         configure(builder);
@@ -64,6 +61,6 @@ public class PipelineRDBuilder : IPipelineRDBuilder
 
 public interface IPipelineRDBuilder
 {
-    void UseCache(IPipelineRDCacheSettings cacheSettings);
-    void AddPipelineServices(Action<IPipelineServicesBuilder> configure);
+    void SetupCache(IPipelineRDCacheSettings cacheSettings);
+    void SetupPipelineServices(Action<IPipelineServicesBuilder> configure);
 }

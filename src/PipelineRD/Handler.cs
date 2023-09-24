@@ -16,52 +16,61 @@ public abstract class Handler<TContext, TRequest> where TContext : BaseContext
 
     public abstract Task Handle(TRequest request);
 
-    protected Task Proceed()
+    protected void Abort(string errorMessage, int httpStatusCode)
     {
-        return Task.CompletedTask;
+        Context.Result = HandlerResultBuilder.CreateDefault()
+            .WithError(new(errorMessage))
+            .WithStatusCode((HttpStatusCode)httpStatusCode)
+            .WithLastHandler(Identifier);
     }
 
-    protected void Abort(string errorMessage, int httpStatusCode)
-        => Context.Result = HandlerResultBuilder.CreateDefault()
-            .WithError(new(errorMessage))
-            .WithStatusCode((HttpStatusCode)httpStatusCode)
-            .WithLastHandler(Identifier);
-
     protected void Abort(string errorMessage, HttpStatusCode httpStatusCode)
-        => Context.Result = HandlerResultBuilder.CreateDefault()
+    {
+        Context.Result = HandlerResultBuilder.CreateDefault()
             .WithError(new(errorMessage))
             .WithStatusCode(httpStatusCode)
             .WithLastHandler(Identifier);
+    }
 
     protected void Abort(HandlerError error, HttpStatusCode httpStatusCode)
-        => Context.Result = HandlerResultBuilder.CreateDefault()
+    {
+        Context.Result = HandlerResultBuilder.CreateDefault()
             .WithError(error)
             .WithStatusCode(httpStatusCode)
             .WithLastHandler(Identifier);
+    }
 
     protected void Abort(HandlerError error, int httpStatusCode)
-        => Context.Result = HandlerResultBuilder.CreateDefault()
+    {
+        Context.Result = HandlerResultBuilder.CreateDefault()
             .WithError(error)
             .WithStatusCode((HttpStatusCode)httpStatusCode)
             .WithLastHandler(Identifier);
+    }
 
     protected void Abort(IEnumerable<HandlerError> errors, HttpStatusCode httpStatusCode)
-        => Context.Result = HandlerResultBuilder.CreateDefault()
+    {
+        Context.Result = HandlerResultBuilder.CreateDefault()
             .WithErrors(errors)
             .WithStatusCode(httpStatusCode)
             .WithLastHandler(Identifier);
+    }
 
     protected void Abort(IEnumerable<HandlerError> errors, int httpStatusCode)
-        => Context.Result = HandlerResultBuilder.CreateDefault()
+    {
+        Context.Result = HandlerResultBuilder.CreateDefault()
             .WithErrors(errors)
             .WithStatusCode((HttpStatusCode)httpStatusCode)
             .WithLastHandler(Identifier);
+    }
 
     protected void Finish(object result, HttpStatusCode httpStatusCode)
-        => Context.Result = HandlerResultBuilder.CreateDefault()
+    {
+        Context.Result = HandlerResultBuilder.CreateDefault()
             .WithResult(result)
             .WithStatusCode(httpStatusCode)
             .WithLastHandler(Identifier);
+    }
 
     protected void Finish(object result, int httpStatusCode)
         => Finish(result, (HttpStatusCode)httpStatusCode);

@@ -7,16 +7,14 @@ namespace PipelineRD.Tests
 {
     public class Startup
     {
-        public void ConfigureServices(IServiceCollection services)
+        public static void ConfigureServices(IServiceCollection services)
         {
             services.AddDistributedMemoryCache();
 
             services.UsePipelineRD(x =>
             {
-                var cacheSettings = new PipelineRDCacheSettings();
-
-                x.UseCache(cacheSettings);
-                x.AddPipelineServices(x => x.InjectAll());
+                x.SetupCache(new PipelineRDCacheSettings());
+                x.SetupPipelineServices(x => x.InjectAll());
             });
         }
     }

@@ -164,7 +164,6 @@ namespace PipelineRD.Tests
         {
             var request = new SampleRequest();
             var pipeline = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
-            pipeline.DisableCache();
             pipeline.WithHandler<FirstSampleHandler>();
             pipeline.WithHandler<SecondSampleHandler>();
             pipeline.WithHandler<ThirdSampleHandler>();

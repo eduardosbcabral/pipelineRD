@@ -24,28 +24,22 @@ IServiceCollection serviceCollection = new ServiceCollection();
 
 serviceCollection.AddDistributedMemoryCache();
 
+var serviceProvider = serviceCollection.BuildServiceProvider();
+var memoryCache = serviceProvider.GetService<IDistributedCache>();
+
 serviceCollection.UsePipelineRD(x =>
 {
-    x.AddPipelineServices(y =>
+    x.SetupPipelineServices(y =>
     {
         y.InjectAll();
     });
+
+    x.SetupCache(new PipelineRDCacheSettings()
+    {
+        KeyPreffix = "pipelinerdsample",
+        TTLInMinutes = 5
+    });
 });
-
-var serviceProvider = serviceCollection.BuildServiceProvider();
-
-var memoryCache = serviceProvider.GetService<IDistributedCache>();
-
-IPipelineRDCacheSettings cacheSettings = new PipelineRDCacheSettings()
-{
-    KeyPreffix = "pipelinerdsample",
-    TTLInMinutes = 5
-};
-
-ICacheProvider cacheProvider = new CacheProvider(cacheSettings, memoryCache);
-
-serviceCollection.AddSingleton(cacheProvider);
-
 
 
 var idempotencyKey = string.Empty;
@@ -57,7 +51,7 @@ var request = new AccountRequest()
 for (var i = 0; i < 5; i++)
 {
     var pipeline = new Pipeline<AccountContext, AccountRequest>(serviceProvider);
-    pipeline.EnableCache(cacheProvider);
+    pipeline.EnableCache();
     pipeline.WithHandler<InitializeAccountHandler>();
     pipeline.WithRecovery<InitializeAccountRecoveryHandler>();
     pipeline.WithHandler<CreateAccountHandler>();

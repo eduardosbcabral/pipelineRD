@@ -30,7 +30,7 @@ public class Pipeline<TContext, TRequest> : IPipeline<TContext, TRequest> where 
     {
         _serviceProvider = serviceProvider;
         _requestKey = requestKey;
-        Context = context ?? serviceProvider.GetService<TContext>() ?? throw new PipelineException($"{typeof(TContext).Name} not found in the dependency container.");
+        Context = context ?? serviceProvider.GetService<TContext>() ?? throw new PipelineException($"{typeof(TContext).Name} is not configured.");
     }
 
     protected Pipeline()
@@ -40,12 +40,12 @@ public class Pipeline<TContext, TRequest> : IPipeline<TContext, TRequest> where 
 
     public IPipeline<TContext, TRequest> EnableCache(ICacheProvider cacheProvider = null)
     {
-        if(_serviceProvider.GetService<IDistributedCache>() == null)
+        if (_serviceProvider.GetService<IDistributedCache>() == null)
         {
             throw new PipelineException("IDistributedCache interface is not injected.");
         }
 
-        _cacheProvider = (cacheProvider ?? _serviceProvider.GetService<ICacheProvider>()) ?? throw new PipelineException($"CacheProvider not found in the dependency container.");
+        _cacheProvider = (cacheProvider ?? _serviceProvider.GetService<ICacheProvider>()) ?? throw new PipelineException($"Interface ICacheProvider is not configured.");
         _useCache = true;
         return this;
     }

@@ -4,12 +4,13 @@ namespace PipelineRD.Sample;
 
 class InitializeAccountHandler : Handler<AccountContext, AccountRequest>
 {
-    public override async Task Handle(AccountRequest request)
+    public override Task Handle(AccountRequest request)
     {
         if (!Context.FirstHandlerSuccess)
         {
             Abort("First step error.", System.Net.HttpStatusCode.BadRequest);
-            return;
+            return Task.CompletedTask;
         }
+        return Task.CompletedTask;
     }
 }
