@@ -30,7 +30,7 @@ public class HandlerResult
         {
             Result = new
             {
-                Message = "No result."
+                Message = "No result. Incomplete execution."
             },
             StatusCode = HttpStatusCode.NoContent
         };

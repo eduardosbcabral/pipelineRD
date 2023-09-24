@@ -115,9 +115,9 @@ namespace PipelineRD.Tests.Builders
 
     class PipelineRDTestStep : Handler<PipelineRDContextTest, PipelineRDRequestTest>
     {
-        public override Task Handle(PipelineRDRequestTest request)
+        public override Task<HandlerResult> Handle(PipelineRDRequestTest request)
         {
-            return Task.CompletedTask;
+            return Proceed();
         }
     }
 

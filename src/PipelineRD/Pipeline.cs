@@ -162,15 +162,14 @@ public class Pipeline<TContext, TRequest> : IPipeline<TContext, TRequest> where 
             {
                 if (handler.Policy != null)
                 {
-                    await handler.Policy.ExecuteAsync(async () =>
+                    Context.Result = await handler.Policy.ExecuteAsync(async () =>
                     {
-                        await handler.Handle(request);
-                        return handler.Result ?? new();
+                        return await handler.Handle(request);
                     });
                 }
                 else
                 {
-                    await handler.Handle(request);
+                    Context.Result = await handler.Handle(request);
                 }
             }
         }
@@ -179,9 +178,7 @@ public class Pipeline<TContext, TRequest> : IPipeline<TContext, TRequest> where 
             => handler.RecoveryHandler != null;
 
         async Task ExecuteRecoveryHandler(Handler<TContext, TRequest> handler)
-        {
-            await handler.RecoveryHandler.Handle(request);
-        }
+            => await handler.RecoveryHandler.Handle(request);
     }
 
     public string GetRequestHash(TRequest request, string idempotencyKey)

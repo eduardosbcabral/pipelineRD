@@ -5,19 +5,18 @@ namespace PipelineRD.Tests.Handlers
 {
     public class SecondSampleHandler : Handler<ContextSample, SampleRequest>
     {
-        public override Task Handle(SampleRequest request)
+        public override Task<HandlerResult> Handle(SampleRequest request)
         {
             this.Context.SecondWasExecutedCount++;
 
             if (!request.ValidSecond)
             {
-                Abort("Error", 400);
-                return Task.CompletedTask;
+                return Abort("Error", 400);
             }
 
             this.Context.SecondWasExecuted = true;
 
-            return Task.CompletedTask;
+            return Proceed();
         }
     }
 }

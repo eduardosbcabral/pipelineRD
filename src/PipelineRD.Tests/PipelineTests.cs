@@ -46,7 +46,7 @@ namespace PipelineRD.Tests
         }
 
         [Fact]
-        public async Task Should_Pipeline_Finish_With_Status_200()
+        public async Task Should_Pipeline_Finish_With_Status_Ok()
         {
             var request = new SampleRequest();
             var pipeline = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();

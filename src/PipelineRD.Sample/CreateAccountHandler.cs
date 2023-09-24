@@ -4,15 +4,14 @@ namespace PipelineRD.Sample;
 
 class CreateAccountHandler : Handler<AccountContext, AccountRequest>
 {
-    public override Task Handle(AccountRequest request)
+    public override Task<HandlerResult> Handle(AccountRequest request)
     {
         if (!Context.SecondHandlerSuccess)
         {
-            Abort("Second step error.", System.Net.HttpStatusCode.BadRequest);
-            return Task.CompletedTask;
+            return Abort("Second step error.", System.Net.HttpStatusCode.BadRequest);
         }
 
-        return Task.CompletedTask;
+        return Proceed();
     }
 }
 

@@ -5,7 +5,7 @@ namespace PipelineRD.Tests.Handlers
 {
     public class InvalidSampleHandler : Handler<ContextSample, SampleRequest>
     {
-        public override Task Handle(SampleRequest _)
+        public override Task<HandlerResult> Handle(SampleRequest _)
         {
             throw new System.NotImplementedException();
         }
