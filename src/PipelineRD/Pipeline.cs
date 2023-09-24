@@ -9,6 +9,8 @@ using System.Text;
 using System.Text.Json;
 
 using PipelineRD.Cache;
+using Serilog;
+using Serilog.Context;
 
 namespace PipelineRD;
 
@@ -16,17 +18,18 @@ public class Pipeline<TContext, TRequest> : IPipeline<TContext, TRequest> where 
 {
     public Queue<Handler<TContext, TRequest>> Handlers { get; private set; }
     public TContext Context { get; private set; }
-    private string Identifier => $"Pipeline<{typeof(TContext).Name}, {typeof(TRequest).Name}>";
+    private static string Identifier => $"Pipeline<{typeof(TContext).Name}, {typeof(TRequest).Name}>";
 
     private readonly IServiceProvider _serviceProvider;
+    private readonly string _requestKey;
     private ICacheProvider _cacheProvider;
     private bool _useCache;
     private string _currentHandlerIdentifier;
 
-
-    public Pipeline(IServiceProvider serviceProvider, TContext context = null) : this()
+    public Pipeline(IServiceProvider serviceProvider, TContext context = null, string requestKey = null) : this()
     {
         _serviceProvider = serviceProvider;
+        _requestKey = requestKey;
         Context = context ?? serviceProvider.GetService<TContext>() ?? throw new PipelineException($"{typeof(TContext).Name} not found in the dependency container.");
     }
 
@@ -53,13 +56,13 @@ public class Pipeline<TContext, TRequest> : IPipeline<TContext, TRequest> where 
         return this;
     }
 
-    public HandlerResult Execute(TRequest request)
-        => Execute(request, string.Empty, string.Empty);
+    public async Task<HandlerResult> Execute(TRequest request)
+        => await Execute(request, string.Empty, string.Empty);
 
-    public HandlerResult Execute(TRequest request, string idempotencyKey)
-        => Execute(request, idempotencyKey, string.Empty);
+    public async Task<HandlerResult> Execute(TRequest request, string idempotencyKey)
+        => await Execute(request, idempotencyKey, string.Empty);
 
-    public HandlerResult Execute(TRequest request, string idempotencyKey, string initialHandlerIdentifier)
+    public async Task<HandlerResult> Execute(TRequest request, string idempotencyKey, string initialHandlerIdentifier)
     {
         var hash = GetRequestHash(request, idempotencyKey);
 
@@ -82,7 +85,7 @@ public class Pipeline<TContext, TRequest> : IPipeline<TContext, TRequest> where 
             }
         }
 
-        var result = ExecutePipeline(request, initialHandlerIdentifier);
+        var result = await ExecutePipeline(request, initialHandlerIdentifier);
 
         if (_useCache)
         {
@@ -98,42 +101,51 @@ public class Pipeline<TContext, TRequest> : IPipeline<TContext, TRequest> where 
         return result;
     }
 
-    private HandlerResult ExecutePipeline(TRequest request, string initialHandlerIdentifier)
+    private async Task<HandlerResult> ExecutePipeline(TRequest request, string initialHandlerIdentifier)
     {
-        var handler = DequeueHandler();
-
-        // Return default result when pipeline does not have a handler
-        if (handler == null)
+        try
         {
-            return GetResult();
+            while (!IsFinished())
+            {
+                var handler = DequeueHandler();
+
+                handler.DefineContext(Context);
+
+                if (HandlerHasRecovery(handler))
+                {
+                    await ExecuteRecoveryHandler(handler);
+                }
+
+                if (ExecuteInOrderCheck() || ExecuteFromHandlerCheck(handler))
+                {
+                    await ExecuteHandler(handler);
+                }
+            };
+        } 
+        catch (Exception ex)
+        {
+            if (Log.Logger != null)
+            {
+                using (LogContext.PushProperty("RequestKey", _requestKey))
+                {
+                    Log.Logger.Error(ex, string.Concat("[PipelineRD] Error in the handler ", _currentHandlerIdentifier));
+                }
+            }
+
+            Context.Result = HandlerResult.InternalServerError(new HandlerError()
+            {
+                Source = ex.Source,
+                Message = ex.GetBaseException().Message,
+            });
         }
+        
 
-        // Ensure that the Context is the same to all executed steps
-        handler.DefineContext(Context);
+        return GetResult();
 
-        // If startHandlerIdentifier is empty, it means that did not use or find any snapshot cache
-        // The second condition means that will ignore the recursive right execution order until the current handler
-        // in execution is equal to the one that we got from the snapshot cache, and it will start from that
-        if (ExecuteInOrder() || ExecuteFromHandler())
-        {
-            ExecuteHandler();
-        }
-        // If it is not an ordered execution, it will check if the handler has a recovery
-        else if(!ExecuteInOrder() && HandlerHasRecovery())
-        {
-            ExecuteRecoveryHandler();
-        }
-
-        return IsFinished() switch
-        {
-            true => GetResult(),
-            false => ExecutePipeline(request, initialHandlerIdentifier)
-        };
-
-        bool ExecuteInOrder()
+        bool ExecuteInOrderCheck ()
             => initialHandlerIdentifier == string.Empty;
 
-        bool ExecuteFromHandler()
+        bool ExecuteFromHandlerCheck(Handler<TContext, TRequest> handler)
         {
             var result = initialHandlerIdentifier == handler.Identifier;
             // Reset the initial handler identifier to execute the next steps
@@ -143,32 +155,32 @@ public class Pipeline<TContext, TRequest> : IPipeline<TContext, TRequest> where 
             return result;
         }
 
-        void ExecuteHandler()
+        async Task ExecuteHandler(Handler<TContext, TRequest> handler)
         {
             // Execute step based on condition if defined
             if (handler.Condition is null || handler.Condition.Compile().Invoke(handler.Context, request))
             {
-                if(handler.Policy != null)
+                if (handler.Policy != null)
                 {
-                    handler.Policy.Execute(() =>
+                    await handler.Policy.ExecuteAsync(async () =>
                     {
-                        handler.Handle(request);
+                        await handler.Handle(request);
                         return handler.Result ?? new();
                     });
                 }
                 else
                 {
-                    handler.Handle(request);
+                    await handler.Handle(request);
                 }
             }
         }
 
-        bool HandlerHasRecovery()
+        bool HandlerHasRecovery(Handler<TContext, TRequest> handler)
             => handler.RecoveryHandler != null;
 
-        void ExecuteRecoveryHandler()
+        async Task ExecuteRecoveryHandler(Handler<TContext, TRequest> handler)
         {
-            handler.RecoveryHandler.Handle(request);
+            await handler.RecoveryHandler.Handle(request);
         }
     }
 
@@ -178,7 +190,7 @@ public class Pipeline<TContext, TRequest> : IPipeline<TContext, TRequest> where 
             GenerateRequestHash(request) :
             idempotencyKey;
 
-        string GenerateRequestHash(TRequest request)
+        static string GenerateRequestHash(TRequest request)
         {
             var requestString = $"{Identifier}: {RequestToString(request)}";
             var encoding = new ASCIIEncoding();
@@ -215,7 +227,7 @@ public class Pipeline<TContext, TRequest> : IPipeline<TContext, TRequest> where 
         return this;
     }
 
-    public IPipeline<TContext, TRequest> WithPolicy(Policy<HandlerResult> policy)
+    public IPipeline<TContext, TRequest> WithPolicy(AsyncPolicy<HandlerResult> policy)
     {
         var step = Handlers.LastOrDefault();
         if (policy != null && step != null)

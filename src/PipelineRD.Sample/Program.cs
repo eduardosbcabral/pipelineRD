@@ -62,14 +62,12 @@ for (var i = 0; i < 5; i++)
     pipeline.WithRecovery<InitializeAccountRecoveryHandler>();
     pipeline.WithHandler<CreateAccountHandler>();
     pipeline.WithRecovery<CreateAccountRecoveryHandler>();
-    pipeline.WithPolicy(
-        Policy.HandleResult<HandlerResult>(
-            x => x.StatusCode == System.Net.HttpStatusCode.BadRequest
-        ).WaitAndRetry(3, retryAttempt => TimeSpan.FromMilliseconds(100 * retryAttempt))
-    );
+    var policy = Policy.HandleResult<HandlerResult>(x => x.StatusCode == System.Net.HttpStatusCode.BadRequest)
+        .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromMilliseconds(100 * retryAttempt));
+    pipeline.WithPolicy(policy);
     pipeline.WithHandler<FinishAccountHandler>();
 
-    var result = pipeline.Execute(request, idempotencyKey);
+    var result = await pipeline.Execute(request, idempotencyKey);
 
     var memCacheField = typeof(MemoryDistributedCache).GetField("_memCache", BindingFlags.NonPublic | BindingFlags.Instance);
     var memCacheValue = memCacheField.GetValue(memoryCache);
@@ -84,7 +82,7 @@ for (var i = 0; i < 5; i++)
             items.Add(val.ToString());
             Console.WriteLine(val.ToString());
             request.Number = 2;
-            //idempotencyKey = val.ToString().Split(':')[2];
+            idempotencyKey = val.ToString().Split(':')[2];
         }
 
     Console.WriteLine(result);

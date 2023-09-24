@@ -54,7 +54,7 @@ namespace PipelineRD.Tests
             pipeline.WithHandler<SecondSampleHandler>();
             pipeline.WithHandler<ThirdSampleHandler>();
 
-            var result = pipeline.Execute(request);
+            var result = await pipeline.Execute(request);
 
             Assert.Equal(HttpStatusCode.OK, result.StatusCode);
             Assert.True(pipeline.Context.FirstWasExecuted);
@@ -69,13 +69,13 @@ namespace PipelineRD.Tests
 
             var pipeline = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
             pipeline.WithHandler<FirstSampleHandler>();
-            var result = pipeline.Execute(request);
+            var result = await pipeline.Execute(request);
 
             Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
         }
 
         [Fact]
-        public void Should_Pipeline_Not_Execute_Handler_When_Condition_Is_Not_Met()
+        public async Task Should_Pipeline_Not_Execute_Handler_When_Condition_Is_Not_Met()
         {
             var request = new SampleRequest() { ValidSecond = false };
 
@@ -85,13 +85,13 @@ namespace PipelineRD.Tests
                 .When((x, _) => x.ValidSecond);
             pipeline.WithHandler<ThirdSampleHandler>();
 
-            var result = pipeline.Execute(request);
+            var result = await pipeline.Execute(request);
 
             Assert.False(pipeline.Context.SecondWasExecuted);
         }
 
         [Fact]
-        public void Should_Pipeline_Not_Execute_Handler_When_Condition_IoC_Is_Not_Met()
+        public async Task Should_Pipeline_Not_Execute_Handler_When_Condition_IoC_Is_Not_Met()
         {
             var request = new SampleRequest() { ValidSecond = false };
 
@@ -103,7 +103,7 @@ namespace PipelineRD.Tests
 
             pipeline.Context.ValidSecond = false;
 
-            pipeline.Execute(request);
+            await pipeline.Execute(request);
 
             Assert.False(pipeline.Context.SecondWasExecuted);
         }
@@ -125,7 +125,7 @@ namespace PipelineRD.Tests
         }
 
         [Fact]
-        public void Should_Pipeline_Use_Cache_By_Request_Hash()
+        public async Task Should_Pipeline_Use_Cache_By_Request_Hash()
         {
             var request = new SampleRequest();
             var pipeline = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
@@ -133,7 +133,7 @@ namespace PipelineRD.Tests
             pipeline.WithHandler<FirstSampleHandler>();
             pipeline.WithHandler<SecondSampleHandler>();
             pipeline.WithHandler<ThirdSampleHandler>();
-            pipeline.Execute(request);
+            await pipeline.Execute(request);
 
             var cacheProvider = _serviceProvider.GetService<ICacheProvider>();
             var snapshot = cacheProvider.Get<PipelineSnapshot<ContextSample>>(pipeline.GetRequestHash(request, string.Empty));
@@ -142,7 +142,7 @@ namespace PipelineRD.Tests
         }
 
         [Fact]
-        public void Should_Pipeline_Use_Cache_By_Idempotency_Hash()
+        public async Task Should_Pipeline_Use_Cache_By_Idempotency_Hash()
         {
             var request = new SampleRequest();
             var idempotencyKey = "123";
@@ -151,7 +151,7 @@ namespace PipelineRD.Tests
             pipeline.WithHandler<FirstSampleHandler>();
             pipeline.WithHandler<SecondSampleHandler>();
             pipeline.WithHandler<ThirdSampleHandler>();
-            pipeline.Execute(request, idempotencyKey);
+            await pipeline.Execute(request, idempotencyKey);
 
             var cacheProvider = _serviceProvider.GetService<ICacheProvider>();
             var snapshot = cacheProvider.Get<PipelineSnapshot<ContextSample>>(pipeline.GetRequestHash(request, idempotencyKey));
@@ -160,7 +160,7 @@ namespace PipelineRD.Tests
         }
 
         [Fact]
-        public void Should_Pipeline_Not_Use_Recovery_By_Hash()
+        public async Task Should_Pipeline_Not_Use_Recovery_By_Hash()
         {
             var request = new SampleRequest();
             var pipeline = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
@@ -168,7 +168,7 @@ namespace PipelineRD.Tests
             pipeline.WithHandler<FirstSampleHandler>();
             pipeline.WithHandler<SecondSampleHandler>();
             pipeline.WithHandler<ThirdSampleHandler>();
-            pipeline.Execute(request);
+            await pipeline.Execute(request);
 
             var cacheProvider = _serviceProvider.GetService<ICacheProvider>();
             var snapshot = cacheProvider.Get<PipelineSnapshot<ContextSample>>(pipeline.GetRequestHash(request, "123456"));
@@ -187,7 +187,7 @@ namespace PipelineRD.Tests
             pipelineOne.WithHandler<FirstSampleHandler>();
             pipelineOne.WithHandler<SecondSampleHandler>();
 
-            pipelineOne.Execute(request, idempotencyKey);
+            await pipelineOne.Execute(request, idempotencyKey);
 
             var pipelineTwo = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
             pipelineTwo.EnableCache();
@@ -197,7 +197,7 @@ namespace PipelineRD.Tests
 
             request.ValidSecond = true;
 
-            var pipelineTwoResult = pipelineTwo.Execute(request, idempotencyKey);
+            var pipelineTwoResult = await pipelineTwo.Execute(request, idempotencyKey);
 
             Assert.Equal(HttpStatusCode.OK, pipelineTwoResult.StatusCode);
         }
@@ -208,9 +208,9 @@ namespace PipelineRD.Tests
             var request = new SampleRequest() { ValidSecond = false };
 
             var pipeline = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
-            var policy = Policy
+            var policy =  Policy
                 .HandleResult<HandlerResult>(x => x.StatusCode == HttpStatusCode.BadRequest)
-                .Retry(3);
+                .RetryAsync(3);
             pipeline.WithHandler<FirstSampleHandler>()
                 .WithPolicy(policy);
 
@@ -219,7 +219,7 @@ namespace PipelineRD.Tests
         }
 
         [Fact]
-        public void Should_Pipeline_Use_Policy_Retry()
+        public async Task Should_Pipeline_Use_Policy_Retry()
         {
             var request = new SampleRequest() { ValidSecond = false };
 
@@ -228,7 +228,7 @@ namespace PipelineRD.Tests
 
             var policy = Policy
                 .HandleResult<HandlerResult>(x => x.StatusCode == HttpStatusCode.BadRequest)
-                .Retry(3);
+                .RetryAsync(3);
 
             pipeline.WithHandler<SecondSampleHandler>()
                 .WithPolicy(policy);
@@ -236,14 +236,14 @@ namespace PipelineRD.Tests
 
             pipeline.Context.ValidSecond = false;
 
-            pipeline.Execute(request);
+            await pipeline.Execute(request);
 
             // Four because it will execute once and retry 3 more times.
             Assert.Equal(4, pipeline.Context.SecondWasExecutedCount);
         }
 
         [Fact]
-        public void Should_test_execute_successfully()
+        public async Task Should_test_execute_successfully()
         {
             var request = new SampleRequest()
             {
@@ -255,7 +255,7 @@ namespace PipelineRD.Tests
             var handler = new FirstSampleHandler();
             handler.DefineContext(context);
 
-            handler.Handle(request);
+            await handler.Handle(request);
 
             var result = handler.Result;
 

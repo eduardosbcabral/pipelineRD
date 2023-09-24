@@ -5,7 +5,7 @@ using PipelineRD.Cache;
 using PipelineRD.Extensions;
 
 using System.Linq;
-
+using System.Threading.Tasks;
 using Xunit;
 
 namespace PipelineRD.Tests.Builders
@@ -115,7 +115,7 @@ namespace PipelineRD.Tests.Builders
 
     class PipelineRDTestStep : Handler<PipelineRDContextTest, PipelineRDRequestTest>
     {
-        public override void Handle(PipelineRDRequestTest request)
+        public override async Task Handle(PipelineRDRequestTest request)
         {
 
         }

@@ -4,7 +4,7 @@ namespace PipelineRD.Sample;
 
 class FinishAccountHandler : Handler<AccountContext, AccountRequest>
 {
-    public override void Handle(AccountRequest request)
+    public override async Task Handle(AccountRequest request)
     {
         if (!Context.ThirdHandlerSuccess)
         {

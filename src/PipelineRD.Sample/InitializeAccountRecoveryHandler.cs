@@ -1,10 +1,8 @@
-﻿using PipelineRD;
-
-namespace PipelineRD.Sample;
+﻿namespace PipelineRD.Sample;
 
 class InitializeAccountRecoveryHandler : RecoveryHandler<AccountContext, AccountRequest>
 {
-    public override void Handle(AccountRequest request)
+    public override async Task Handle(AccountRequest request)
     {
     }
 }

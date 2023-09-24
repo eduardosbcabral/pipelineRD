@@ -11,18 +11,18 @@ public class HandlerResult
 
     public bool IsSuccess => (int)StatusCode >= 200 && (int)StatusCode <= 299;
 
-    public static HandlerResult OK(object result = null)
+    public static HandlerResult Ok(object result = null)
         => new()
         {
             StatusCode = HttpStatusCode.OK,
             Result = result
         };
 
-    public static HandlerResult BadRequest(object result = null)
+    public static HandlerResult BadRequest(params HandlerError[] errors)
         => new()
         {
             StatusCode = HttpStatusCode.BadRequest,
-            Result = result
+            Errors = errors.ToList()
         };
 
     public static HandlerResult NoResult()
@@ -32,6 +32,13 @@ public class HandlerResult
             {
                 Message = "No result."
             },
-            StatusCode = 0
+            StatusCode = HttpStatusCode.NoContent
+        };
+
+    public static HandlerResult InternalServerError(params HandlerError[] errors)
+        => new()
+        {
+            Result = result,
+            StatusCode = HttpStatusCode.InternalServerError
         };
 }

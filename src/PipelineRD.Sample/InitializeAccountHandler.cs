@@ -4,7 +4,7 @@ namespace PipelineRD.Sample;
 
 class InitializeAccountHandler : Handler<AccountContext, AccountRequest>
 {
-    public override void Handle(AccountRequest request)
+    public override async Task Handle(AccountRequest request)
     {
         if (!Context.FirstHandlerSuccess)
         {
@@ -13,4 +13,3 @@ class InitializeAccountHandler : Handler<AccountContext, AccountRequest>
         }
     }
 }
-

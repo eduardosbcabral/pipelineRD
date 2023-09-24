@@ -4,7 +4,7 @@ public abstract class RecoveryHandler<TContext, TRequest> where TContext : BaseC
 {
     public TContext Context { get; private set; }
 
-    public abstract void Handle(TRequest request);
+    public abstract Task Handle(TRequest request);
 
     public void DefineContext(TContext context)
         => Context = context;

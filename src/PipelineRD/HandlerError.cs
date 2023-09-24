@@ -10,6 +10,10 @@ public class HandlerError
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string Source { get; set; }
 
+    public HandlerError()
+    {
+    }
+
     public HandlerError(string message)
     {
         Message = message;
