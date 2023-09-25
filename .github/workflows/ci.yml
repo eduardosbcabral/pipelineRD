@@ -27,3 +27,6 @@ jobs:
       
     - name: Build
       run: dotnet build --configuration Release --no-restore src/PipelineRD.sln
+
+    - name: Run Unit Tests
+      run: dotnet test --configuration Release --no-restore --no-build src/PipelineRD.Tests
