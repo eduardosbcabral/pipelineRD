@@ -1,0 +1,23 @@
+name: release
+
+on:
+  release:
+    types: [released]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v3
+        
+      - name: Build
+        run: dotnet build -c Release src/PipelineRD.sln
+      
+      - name: Create the PipelineRD package
+        run: dotnet pack -c Release --no-build -p:Version=${{github.ref_name}} -o src/PipelineRD/bin/Release src/PipelineRD/PipelineRD.csproj
+
+      - name: Publish the PipelineRD package
+        run: dotnet nuget push src/PipelineRD/bin/Release/*.nupkg --api-key ${{secrets.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json
