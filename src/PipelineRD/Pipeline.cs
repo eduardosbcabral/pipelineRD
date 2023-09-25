@@ -21,7 +21,7 @@ public class Pipeline<TContext, TRequest> : IPipeline<TContext, TRequest> where 
     private static string Identifier => $"Pipeline<{typeof(TContext).Name}, {typeof(TRequest).Name}>";
 
     private readonly IServiceProvider _serviceProvider;
-    private readonly string _requestKey;
+    private string _requestKey;
     private ICacheProvider _cacheProvider;
     private bool _useCache;
     private string _currentHandlerIdentifier;
@@ -53,6 +53,12 @@ public class Pipeline<TContext, TRequest> : IPipeline<TContext, TRequest> where 
     public IPipeline<TContext, TRequest> DisableCache()
     {
         _useCache = false;
+        return this;
+    }
+
+    public IPipeline<TContext, TRequest> WithRequestKey(string requestKey)
+    {
+        _requestKey = requestKey;
         return this;
     }
 

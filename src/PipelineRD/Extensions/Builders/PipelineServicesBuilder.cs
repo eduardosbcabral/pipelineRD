@@ -50,13 +50,21 @@ public class PipelineServicesBuilder : IPipelineServicesBuilder
     {
         if (_pipelinesAlreadySet) return;
 
-        _ = pipelinesLifetime switch
+        switch (pipelinesLifetime)
         {
-            ServiceLifetime.Scoped => Services.AddScoped(typeof(IPipeline<,>), typeof(Pipeline<,>)),
-            ServiceLifetime.Transient => Services.AddTransient(typeof(IPipeline<,>), typeof(Pipeline<,>)),
-            ServiceLifetime.Singleton => Services.AddScoped(typeof(IPipeline<,>), typeof(Pipeline<,>)),
-            _ => null
-        };
+            case ServiceLifetime.Scoped:
+                Services.AddScoped(typeof(IPipeline<,>), typeof(Pipeline<,>));
+                Services.AddScoped(typeof(Pipeline<,>));
+                break;
+            case ServiceLifetime.Transient:
+                Services.AddTransient(typeof(IPipeline<,>), typeof(Pipeline<,>));
+                Services.AddTransient(typeof(Pipeline<,>));
+                break;
+            case ServiceLifetime.Singleton:
+                Services.AddSingleton(typeof(IPipeline<,>), typeof(Pipeline<,>));
+                Services.AddSingleton(typeof(Pipeline<,>));
+                break;
+        }
 
         _pipelinesAlreadySet = true;
     }

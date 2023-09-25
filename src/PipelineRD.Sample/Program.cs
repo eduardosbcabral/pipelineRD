@@ -13,21 +13,11 @@ using PipelineRD;
 using PipelineRD.Cache;
 using PipelineRD.Extensions;
 
-IServiceCollection serviceCollection = new ServiceCollection();
+var builder = WebApplication.CreateBuilder(args);
 
-//serviceCollection.AddScoped<AccountContext>();
-//serviceCollection.AddScoped<InitializeAccountHandler>();
-//serviceCollection.AddScoped<CreateAccountHandler>();
-//serviceCollection.AddScoped<FinishAccountHandler>();
-//serviceCollection.AddScoped<InitializeAccountRecoveryHandler>();
-//serviceCollection.AddScoped<CreateAccountRecoveryHandler>();
+builder.Services.AddDistributedMemoryCache();
 
-serviceCollection.AddDistributedMemoryCache();
-
-var serviceProvider = serviceCollection.BuildServiceProvider();
-var memoryCache = serviceProvider.GetService<IDistributedCache>();
-
-serviceCollection.UsePipelineRD(x =>
+builder.Services.UsePipelineRD(x =>
 {
     x.SetupPipelineServices(y =>
     {
@@ -41,6 +31,9 @@ serviceCollection.UsePipelineRD(x =>
     });
 });
 
+var app = builder.Build();
+
+var memoryCache = app.Services.GetService<IMemoryCache>();
 
 var idempotencyKey = string.Empty;
 var request = new AccountRequest()
@@ -50,7 +43,8 @@ var request = new AccountRequest()
 
 for (var i = 0; i < 5; i++)
 {
-    var pipeline = new Pipeline<AccountContext, AccountRequest>(serviceProvider);
+    using var scope = app.Services.CreateScope();
+    var pipeline = scope.ServiceProvider.GetService<Pipeline<AccountContext, AccountRequest>>();
     pipeline.EnableCache();
     pipeline.WithHandler<InitializeAccountHandler>();
     pipeline.WithRecovery<InitializeAccountRecoveryHandler>();
