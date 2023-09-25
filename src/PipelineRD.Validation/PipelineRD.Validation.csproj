@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net6</TargetFramework>
+    <PackageId>PipelineRD.Validation</PackageId>
+    <Authors>Eduardo Cabral</Authors>
+    <PackageDescription>The complementary validation package for PipelineRD. It uses Fluent Validation to do it.</PackageDescription>
+    <RepositoryUrl>https://github.com/eduardosbcabral/pipelineRD-validation</RepositoryUrl>
+    <LangVersion>latest</LangVersion>
+    <PackageIconUrl>https://user-images.githubusercontent.com/29133996/134798452-de38b1d7-4a8a-4410-b60b-1814b7339a18.png</PackageIconUrl>
+
+    <Summary>The complementary validation package for PipelineRD. It uses Fluent Validation to do it.</Summary>
+    <Description>The complementary validation package for PipelineRD. It uses Fluent Validation to do it.</Description>
+    <PackageId>PipelineRD.Validation</PackageId>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Authors>Eduardo Cabral</Authors>
+    <RepositoryUrl>https://github.com/eduardosbcabral/pipelineRD-validation</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <IsPackable>true</IsPackable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="9.5.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PipelineRD\PipelineRD.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\icon.png" Pack="true" PackagePath="" Visible="False" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="" Visible="False" />
+  </ItemGroup>
+</Project>

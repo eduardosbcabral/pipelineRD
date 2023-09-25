@@ -10,6 +10,7 @@ public interface IPipeline<TContext, TRequest> where TContext : BaseContext
 {
     Queue<Handler<TContext, TRequest>> Handlers { get; }
     TContext Context { get; }
+    IServiceProvider ServiceProvider { get; }
 
     IPipeline<TContext, TRequest> EnableCache(ICacheProvider cacheProvider = null);
     IPipeline<TContext, TRequest> WithRequestKey(string requestKey);

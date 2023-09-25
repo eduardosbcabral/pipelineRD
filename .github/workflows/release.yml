@@ -19,5 +19,11 @@ jobs:
       - name: Create the PipelineRD package
         run: dotnet pack -c Release --no-build -p:Version=${{github.ref_name}} -o src/PipelineRD/bin/Release src/PipelineRD/PipelineRD.csproj
 
+      - name: Create the PipelineRD.Validation package
+        run: dotnet pack -c Release --no-build -p:Version=${{github.ref_name}} -o src/PipelineRD.Validation/bin/Release src/PipelineRD.Validation/PipelineRD.Validation.csproj
+
       - name: Publish the PipelineRD package
         run: dotnet nuget push src/PipelineRD/bin/Release/*.nupkg --api-key ${{secrets.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json
+
+      - name: Publish the PipelineRD.Validation package
+        run: dotnet nuget push src/PipelineRD.Validation/bin/Release/*.nupkg --api-key ${{secrets.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json

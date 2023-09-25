@@ -18,9 +18,9 @@ public class Pipeline<TContext, TRequest> : IPipeline<TContext, TRequest> where 
 {
     public Queue<Handler<TContext, TRequest>> Handlers { get; private set; }
     public TContext Context { get; private set; }
+    public IServiceProvider ServiceProvider { get; private set; }
     private static string Identifier => $"Pipeline<{typeof(TContext).Name}, {typeof(TRequest).Name}>";
 
-    private readonly IServiceProvider _serviceProvider;
     private string _requestKey;
     private ICacheProvider _cacheProvider;
     private bool _useCache;
@@ -28,7 +28,7 @@ public class Pipeline<TContext, TRequest> : IPipeline<TContext, TRequest> where 
 
     public Pipeline(IServiceProvider serviceProvider, TContext context = null, string requestKey = null) : this()
     {
-        _serviceProvider = serviceProvider;
+        ServiceProvider = serviceProvider;
         _requestKey = requestKey;
         Context = context ?? serviceProvider.GetService<TContext>() ?? throw new PipelineException($"{typeof(TContext).Name} is not configured.");
     }
@@ -40,12 +40,12 @@ public class Pipeline<TContext, TRequest> : IPipeline<TContext, TRequest> where 
 
     public IPipeline<TContext, TRequest> EnableCache(ICacheProvider cacheProvider = null)
     {
-        if (_serviceProvider.GetService<IDistributedCache>() == null)
+        if (ServiceProvider.GetService<IDistributedCache>() == null)
         {
             throw new PipelineException("IDistributedCache interface is not injected.");
         }
 
-        _cacheProvider = (cacheProvider ?? _serviceProvider.GetService<ICacheProvider>()) ?? throw new PipelineException($"Interface ICacheProvider is not configured.");
+        _cacheProvider = (cacheProvider ?? ServiceProvider.GetService<ICacheProvider>()) ?? throw new PipelineException($"Interface ICacheProvider is not configured.");
         _useCache = true;
         return this;
     }
@@ -219,7 +219,7 @@ public class Pipeline<TContext, TRequest> : IPipeline<TContext, TRequest> where 
 
     public IPipeline<TContext, TRequest> WithHandler<THandler>() where THandler : Handler<TContext, TRequest>
     {
-        var handler = _serviceProvider.GetService<THandler>() ?? throw new PipelineException($"{typeof(THandler).Name} not found in the dependency container.");
+        var handler = ServiceProvider.GetService<THandler>() ?? throw new PipelineException($"{typeof(THandler).Name} not found in the dependency container.");
         return WithHandler(handler);
     }
 
@@ -243,7 +243,7 @@ public class Pipeline<TContext, TRequest> : IPipeline<TContext, TRequest> where 
 
     public IPipeline<TContext, TRequest> WithRecovery<TRecoveryHandler>() where TRecoveryHandler : RecoveryHandler<TContext, TRequest>
     {
-        var handler = _serviceProvider.GetService<TRecoveryHandler>() ?? throw new PipelineException($"Recovery {typeof(TRecoveryHandler).Name} not found in the dependency container.");
+        var handler = ServiceProvider.GetService<TRecoveryHandler>() ?? throw new PipelineException($"Recovery {typeof(TRecoveryHandler).Name} not found in the dependency container.");
         return WithRecovery(handler);
     }
 

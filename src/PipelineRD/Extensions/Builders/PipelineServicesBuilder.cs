@@ -115,6 +115,8 @@ public class PipelineServicesBuilder : IPipelineServicesBuilder
 
 public interface IPipelineServicesBuilder
 {
+    IEnumerable<TypeInfo> Types { get; }
+    IServiceCollection Services { get; }
     void InjectContexts(ServiceLifetime contextsLifetime = ServiceLifetime.Scoped);
     void InjectHandlers(ServiceLifetime handlersLifetime = ServiceLifetime.Scoped);
     void InjectPipelines(ServiceLifetime pipelinesLifetime = ServiceLifetime.Scoped);
