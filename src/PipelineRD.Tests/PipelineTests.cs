@@ -1,17 +1,17 @@
-﻿using PipelineRD.Tests.Request;
-using PipelineRD.Tests.Steps;
+﻿using Microsoft.Extensions.DependencyInjection;
 
-using Microsoft.Extensions.DependencyInjection;
+using PipelineRD.Cache;
+using PipelineRD.Tests.Handlers;
+using PipelineRD.Tests.Request;
+
+using Polly;
 
 using System;
-
-using Xunit;
-using PipelineRD.Tests.Conditions;
-using PipelineRD.Extensions;
 using System.Linq;
-using Polly;
 using System.Net;
 using System.Threading.Tasks;
+
+using Xunit;
 
 namespace PipelineRD.Tests
 {
@@ -25,42 +25,38 @@ namespace PipelineRD.Tests
         }
 
         [Fact]
-        public void Should_Pipeline_Add_First_Step()
+        public void Should_Pipeline_Add_First_Handler()
         {
-            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
-            pipeline.AddNext<IFirstSampleStep>();
-            Assert.Equal("Pipeline<ContextSample>.FirstSampleStep", pipeline.CurrentRequestStepIdentifier);
+            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
+            pipeline.WithHandler<FirstSampleHandler>();
+
+            var handler = pipeline.Handlers.LastOrDefault();
+            Assert.Contains("FirstSampleHandler", handler.Identifier);
         }
 
         [Fact]
-        public void Should_Pipeline_Proceed_To_Next_Step()
+        public void Should_Pipeline_Proceed_To_Next_Handler()
         {
-            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
-            pipeline.AddNext<IFirstSampleStep>();
-            pipeline.AddNext<ISecondSampleStep>();
-            Assert.Equal("Pipeline<ContextSample>.SecondSampleStep", pipeline.CurrentRequestStepIdentifier);
+            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
+            pipeline.WithHandler<FirstSampleHandler>();
+            pipeline.WithHandler<SecondSampleHandler>();
+
+            var handler = pipeline.Handlers.LastOrDefault();
+            Assert.Contains("SecondSampleHandler", handler.Identifier);
         }
 
         [Fact]
-        public void Should_Pipeline_AddNext_Throw_PipelineException_After_AddFinally()
-        {
-            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
-            pipeline.AddFinally<IFirstSampleStep>();
-            Assert.Throws<PipelineException>(() => pipeline.AddNext<ISecondSampleStep>());
-        }
-
-        [Fact]
-        public async Task Should_Pipeline_Finish_With_Status_200()
+        public async Task Should_Pipeline_Finish_With_Status_Ok()
         {
             var request = new SampleRequest();
-            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
-            pipeline.AddNext<IFirstSampleStep>();
-            pipeline.AddNext<ISecondSampleStep>();
-            pipeline.AddNext<IThirdSampleStep>();
+            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
+            pipeline.WithHandler<FirstSampleHandler>();
+            pipeline.WithHandler<SecondSampleHandler>();
+            pipeline.WithHandler<ThirdSampleHandler>();
 
             var result = await pipeline.Execute(request);
 
-            Assert.Equal(200, result.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, result.StatusCode);
             Assert.True(pipeline.Context.FirstWasExecuted);
             Assert.True(pipeline.Context.SecondWasExecuted);
             Assert.True(pipeline.Context.ThirdWasExecuted);
@@ -71,43 +67,43 @@ namespace PipelineRD.Tests
         {
             var request = new SampleRequest() { ValidFirst = false };
 
-            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
-            pipeline.AddNext<IFirstSampleStep>();
+            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
+            pipeline.WithHandler<FirstSampleHandler>();
             var result = await pipeline.Execute(request);
 
-            Assert.Equal(400, result.StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, result.StatusCode);
         }
 
         [Fact]
-        public void Should_Pipeline_Not_Execute_Step_When_Condition_Is_Not_Met()
+        public async Task Should_Pipeline_Not_Execute_Handler_When_Condition_Is_Not_Met()
         {
             var request = new SampleRequest() { ValidSecond = false };
 
-            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
-            pipeline.AddNext<IFirstSampleStep>();
-            pipeline.AddNext<ISecondSampleStep>()
-                .When(x => x.ValidSecond);
-            pipeline.AddNext<IThirdSampleStep>();
+            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
+            pipeline.WithHandler<FirstSampleHandler>();
+            pipeline.WithHandler<SecondSampleHandler>()
+                .When((x, _) => x.ValidSecond);
+            pipeline.WithHandler<ThirdSampleHandler>();
 
-            var result = pipeline.Execute(request);
+            var result = await pipeline.Execute(request);
 
             Assert.False(pipeline.Context.SecondWasExecuted);
         }
 
         [Fact]
-        public void Should_Pipeline_Not_Execute_Step_When_Condition_IoC_Is_Not_Met()
+        public async Task Should_Pipeline_Not_Execute_Handler_When_Condition_IoC_Is_Not_Met()
         {
             var request = new SampleRequest() { ValidSecond = false };
 
-            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
-            pipeline.AddNext<IFirstSampleStep>();
-            pipeline.AddNext<ISecondSampleStep>()
-                .When<ISampleCondition>();
-            pipeline.AddNext<IThirdSampleStep>();
+            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
+            pipeline.WithHandler<FirstSampleHandler>();
+            pipeline.WithHandler<SecondSampleHandler>()
+                .When((x, _) => x.ValidSecond == true);
+            pipeline.WithHandler<ThirdSampleHandler>();
 
             pipeline.Context.ValidSecond = false;
 
-            pipeline.Execute(request);
+            await pipeline.Execute(request);
 
             Assert.False(pipeline.Context.SecondWasExecuted);
         }
@@ -116,187 +112,154 @@ namespace PipelineRD.Tests
         public void Should_Pipeline_Use_Recovery_By_Hash_Per_Default()
         {
             var request = new SampleRequest();
-            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
-            pipeline.AddNext<IFirstSampleStep>();
-            pipeline.AddNext<ISecondSampleStep>();
-            pipeline.AddNext<IThirdSampleStep>();
+            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
+            pipeline.WithHandler<FirstSampleHandler>();
+            pipeline.WithHandler<SecondSampleHandler>();
+            pipeline.WithHandler<ThirdSampleHandler>();
             pipeline.Execute(request);
 
             var cacheProvider = _serviceProvider.GetService<ICacheProvider>();
-            var snapshot = cacheProvider.Get<PipelineSnapshot>(request.GenerateHash(pipeline.Identifier)).Result;
+            var snapshot = cacheProvider.Get<PipelineSnapshot<ContextSample>>(pipeline.GetRequestHash(request, "123"));
 
             Assert.NotNull(snapshot);
         }
 
         [Fact]
-        public void Should_Pipeline_Use_Recovery_By_Hash()
+        public async Task Should_Pipeline_Use_Cache_By_Request_Hash()
         {
             var request = new SampleRequest();
-            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
-            pipeline.EnableRecoveryRequestByHash();
-            pipeline.AddNext<IFirstSampleStep>();
-            pipeline.AddNext<ISecondSampleStep>();
-            pipeline.AddNext<IThirdSampleStep>();
-            pipeline.Execute(request);
+            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
+            pipeline.EnableCache();
+            pipeline.WithHandler<FirstSampleHandler>();
+            pipeline.WithHandler<SecondSampleHandler>();
+            pipeline.WithHandler<ThirdSampleHandler>();
+            await pipeline.Execute(request);
 
             var cacheProvider = _serviceProvider.GetService<ICacheProvider>();
-            var snapshot = cacheProvider.Get<PipelineSnapshot>(request.GenerateHash(pipeline.Identifier)).Result;
+            var snapshot = cacheProvider.Get<PipelineSnapshot<ContextSample>>(pipeline.GetRequestHash(request, string.Empty));
 
             Assert.NotNull(snapshot);
         }
 
         [Fact]
-        public void Should_Pipeline_Not_Use_Recovery_By_Hash()
+        public async Task Should_Pipeline_Use_Cache_By_Idempotency_Hash()
         {
             var request = new SampleRequest();
-            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
-            pipeline.DisableRecoveryRequestByHash();
-            pipeline.AddNext<IFirstSampleStep>();
-            pipeline.AddNext<ISecondSampleStep>();
-            pipeline.AddNext<IThirdSampleStep>();
-            pipeline.Execute(request);
+            var idempotencyKey = "123";
+            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
+            pipeline.EnableCache();
+            pipeline.WithHandler<FirstSampleHandler>();
+            pipeline.WithHandler<SecondSampleHandler>();
+            pipeline.WithHandler<ThirdSampleHandler>();
+            await pipeline.Execute(request, idempotencyKey);
 
             var cacheProvider = _serviceProvider.GetService<ICacheProvider>();
-            var snapshot = cacheProvider.Get<PipelineSnapshot>(request.GenerateHash(pipeline.Identifier)).Result;
+            var snapshot = cacheProvider.Get<PipelineSnapshot<ContextSample>>(pipeline.GetRequestHash(request, idempotencyKey));
+
+            Assert.NotNull(snapshot);
+        }
+
+        [Fact]
+        public async Task Should_Pipeline_Not_Use_Recovery_By_Hash()
+        {
+            var request = new SampleRequest();
+            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
+            pipeline.WithHandler<FirstSampleHandler>();
+            pipeline.WithHandler<SecondSampleHandler>();
+            pipeline.WithHandler<ThirdSampleHandler>();
+            await pipeline.Execute(request);
+
+            var cacheProvider = _serviceProvider.GetService<ICacheProvider>();
+            var snapshot = cacheProvider.Get<PipelineSnapshot<ContextSample>>(pipeline.GetRequestHash(request, "123456"));
 
             Assert.Null(snapshot);
         }
 
         [Fact]
-        public async Task Should_Second_Pipeline_Use_Recovery_By_Existent_Snapshot()
+        public async Task Should_Second_Pipeline_Use_Cache_By_Existent_Snapshot()
         {
             var idempotencyKey = "key";
             var request = new SampleRequest() { ValidSecond = false };
 
-            var pipelineOne = _serviceProvider.GetService<IPipeline<ContextSample>>();
-            pipelineOne.AddNext<IFirstSampleStep>();
-            pipelineOne.AddNext<ISecondSampleStep>();
+            var pipelineOne = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
+            pipelineOne.EnableCache();
+            pipelineOne.WithHandler<FirstSampleHandler>();
+            pipelineOne.WithHandler<SecondSampleHandler>();
 
             await pipelineOne.Execute(request, idempotencyKey);
 
-            var pipelineTwo = _serviceProvider.GetService<IPipeline<ContextSample>>();
-            pipelineTwo.AddNext<IFirstSampleStep>();
-            pipelineTwo.AddNext<ISecondSampleStep>();
-            pipelineTwo.AddNext<IThirdSampleStep>();
+            var pipelineTwo = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
+            pipelineTwo.EnableCache();
+            pipelineTwo.WithHandler<FirstSampleHandler>();
+            pipelineTwo.WithHandler<SecondSampleHandler>();
+            pipelineTwo.WithHandler<ThirdSampleHandler>();
 
             request.ValidSecond = true;
 
             var pipelineTwoResult = await pipelineTwo.Execute(request, idempotencyKey);
 
-            Assert.Equal(200, pipelineTwoResult.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, pipelineTwoResult.StatusCode);
         }
 
         [Fact]
-        public void Should_Pipeline_Add_Rollback_Step()
-        {
-            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
-            pipeline.AddNext<IFirstSampleStep>();
-            pipeline.AddRollback<IFirstSampleRollbackStep>();
-            pipeline.AddNext<ISecondSampleStep>();
-            pipeline.AddRollback<ISecondSampleRollbackStep>();
-
-            var firstStep = _serviceProvider.GetService<IFirstSampleStep>();
-            var secondStep = _serviceProvider.GetService<ISecondSampleRollbackStep>();
-
-            Assert.Equal(0, firstStep.RollbackIndex);
-            Assert.Equal(1, secondStep.RollbackIndex);
-        }
-
-        [Fact]
-        public async Task Should_Pipeline_Execute_All_Rollback_Steps()
-        {
-            var request = new SampleRequest();
-            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
-            pipeline.AddNext<IFirstSampleStep>();
-            pipeline.AddRollback<IFirstSampleRollbackStep>();
-            pipeline.AddNext<ISecondSampleStep>();
-            pipeline.AddRollback<ISecondSampleRollbackStep>();
-            pipeline.AddNext<IRollbackSampleStep>();
-
-            var pipelineResult = await pipeline.Execute(request);
-
-            Assert.Equal(201, pipelineResult.StatusCode);
-            Assert.True(pipeline.Context.FirstRollbackWasExecuted);
-            Assert.True(pipeline.Context.SecondRollbackWasExecuted);
-        }
-
-        [Fact]
-        public async Task Should_Pipeline_Execute_Until_Certain_Index_Rollback_Steps()
-        {
-            var request = new SampleRequest();
-            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
-            pipeline.AddNext<IFirstSampleStep>();
-            pipeline.AddRollback<IFirstSampleRollbackStep>();
-            pipeline.AddNext<ISecondSampleStep>();
-            pipeline.AddNext<IRollbackSampleStep>();
-            pipeline.AddNext<IThirdSampleStep>();
-            pipeline.AddRollback<ISecondSampleRollbackStep>();
-
-            var pipelineResult = await pipeline.Execute(request);
-
-            Assert.Equal(201, pipelineResult.StatusCode);
-            Assert.True(pipeline.Context.FirstRollbackWasExecuted);
-            Assert.False(pipeline.Context.SecondRollbackWasExecuted);
-        }
-
-        [Fact]
-        public void Should_Pipeline_Set_Step_Policy()
+        public void Should_Pipeline_Set_Handler_Policy()
         {
             var request = new SampleRequest() { ValidSecond = false };
 
-            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
-            var policy = Policy
-                .HandleResult<RequestStepResult>(x => x.StatusCode == (int)HttpStatusCode.BadRequest)
-                .Retry(3);
-            pipeline.AddNext<IFirstSampleStep>()
+            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
+            var policy =  Policy
+                .HandleResult<HandlerResult>(x => x.StatusCode == HttpStatusCode.BadRequest)
+                .RetryAsync(3);
+            pipeline.WithHandler<FirstSampleHandler>()
                 .WithPolicy(policy);
 
-            var currentStep = (IRequestStep<ContextSample>)pipeline.Steps.FirstOrDefault();
-            Assert.NotNull(currentStep.Policy);
+            var currentHandler = pipeline.Handlers.FirstOrDefault();
+            Assert.NotNull(currentHandler.Policy);
         }
 
         [Fact]
-        public void Should_Pipeline_Use_Policy_Retry()
+        public async Task Should_Pipeline_Use_Policy_Retry()
         {
             var request = new SampleRequest() { ValidSecond = false };
 
-            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample>>();
-            pipeline.AddNext<IFirstSampleStep>();
+            var pipeline = _serviceProvider.GetService<IPipeline<ContextSample, SampleRequest>>();
+            pipeline.WithHandler<FirstSampleHandler>();
 
             var policy = Policy
-                .HandleResult<RequestStepResult>(x => x.StatusCode == (int)HttpStatusCode.BadRequest)
-                .Retry(3);
+                .HandleResult<HandlerResult>(x => x.StatusCode == HttpStatusCode.BadRequest)
+                .RetryAsync(3);
 
-            pipeline.AddNext<ISecondSampleStep>()
+            pipeline.WithHandler<SecondSampleHandler>()
                 .WithPolicy(policy);
-            pipeline.AddNext<IThirdSampleStep>();
+            pipeline.WithHandler<ThirdSampleHandler>();
 
             pipeline.Context.ValidSecond = false;
 
-            pipeline.Execute(request);
+            await pipeline.Execute(request);
 
             // Four because it will execute once and retry 3 more times.
             Assert.Equal(4, pipeline.Context.SecondWasExecutedCount);
         }
 
         [Fact]
-        public void Should_test_execute_successfully()
+        public async Task Should_test_execute_successfully()
         {
             var request = new SampleRequest()
             {
                 ValidFirst = true
             };
-            
+
             var context = new ContextSample();
-            context.SetRequest(request);
 
-            var step = new FirstSampleStep();
-            step.SetContext(context);
-            
-            var result = step.HandleRequest();
+            var handler = new FirstSampleHandler();
+            handler.DefineContext(context);
 
-            Assert.Equal("Next", result.ResultObject);
-            Assert.True(result.IsSuccess());
+            await handler.Handle(request);
+
+            var result = handler.Result;
+
+            Assert.Null(result);
+            Assert.True(context.FirstWasExecuted);
         }
     }
 }

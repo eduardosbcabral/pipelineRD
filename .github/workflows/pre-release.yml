@@ -1,0 +1,34 @@
+name: pre-release
+
+on:
+  release:
+    types: [prereleased]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v3
+
+      - name: Set current date as env variable
+        run: echo "NOW=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV
+      - name: Echo current date
+        run: echo $NOW
+        
+      - name: Build
+        run: dotnet build -c Release src/PipelineRD.sln
+      
+      - name: Create the PipelineRD package
+        run: dotnet pack -c Release --no-build -p:Version="${{github.ref_name}}-alpha.${{ env.NOW }}" -o src/PipelineRD/bin/Release src/PipelineRD/PipelineRD.csproj
+
+      - name: Create the PipelineRD.Validation package
+        run: dotnet pack -c Release --no-build -p:Version="${{github.ref_name}}-alpha.${{ env.NOW }}" -o src/PipelineRD.Validation/bin/Release src/PipelineRD.Validation/PipelineRD.Validation.csproj
+
+      - name: Publish the PipelineRD package
+        run: dotnet nuget push src/PipelineRD/bin/Release/*.nupkg --api-key ${{secrets.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json
+
+      - name: Publish the PipelineRD.Validation package
+        run: dotnet nuget push src/PipelineRD.Validation/bin/Release/*.nupkg --api-key ${{secrets.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json

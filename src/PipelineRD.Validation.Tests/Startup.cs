@@ -1,20 +1,21 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-
 using PipelineRD.Cache;
 using PipelineRD.Extensions;
 
-namespace PipelineRD.Tests
+namespace PipelineRD.Validation.Tests
 {
-    public class Startup
+    class Startup
     {
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddDistributedMemoryCache();
-
             services.UsePipelineRD(x =>
             {
                 x.SetupCache(new PipelineRDCacheSettings());
-                x.SetupPipelineServices(x => x.InjectAll());
+                x.SetupPipelineServices(x =>
+                {
+                    x.InjectAll();
+                    x.InjectRequestValidators();
+                });
             });
         }
     }

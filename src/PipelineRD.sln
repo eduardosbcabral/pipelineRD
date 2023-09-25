@@ -1,13 +1,17 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31205.134
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32210.238
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PipelineRD", "PipelineRD\PipelineRD.csproj", "{7770FFE7-CEC8-49A1-92CE-EE9A1966174C}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PipelineRD.Sample", "PipelineRD.Sample\PipelineRD.Sample.csproj", "{0693EDAE-A80F-41EF-AB76-FCED767F02CF}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PipelineRD.Tests", "PipelineRD.Tests\PipelineRD.Tests.csproj", "{ABB2FE18-0DE6-40F8-8C2A-5854D189DD13}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PipelineRD", "PipelineRD\PipelineRD.csproj", "{742AF2B9-58B8-40D2-9262-2462548925F6}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PipelineRD.Sample", "PipelineRD.Sample\PipelineRD.Sample.csproj", "{43206434-F5E6-4E74-A1E8-FE69EEBC0093}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PipelineRD.Validation", "PipelineRD.Validation\PipelineRD.Validation.csproj", "{4611FF49-11E4-4684-BC50-77035281208E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PipelineRD.Validation.Tests", "PipelineRD.Validation.Tests\PipelineRD.Validation.Tests.csproj", "{4BD57D55-87D5-4D73-8015-DB940095B9AD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,18 +19,26 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{7770FFE7-CEC8-49A1-92CE-EE9A1966174C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7770FFE7-CEC8-49A1-92CE-EE9A1966174C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7770FFE7-CEC8-49A1-92CE-EE9A1966174C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7770FFE7-CEC8-49A1-92CE-EE9A1966174C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0693EDAE-A80F-41EF-AB76-FCED767F02CF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0693EDAE-A80F-41EF-AB76-FCED767F02CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0693EDAE-A80F-41EF-AB76-FCED767F02CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0693EDAE-A80F-41EF-AB76-FCED767F02CF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{ABB2FE18-0DE6-40F8-8C2A-5854D189DD13}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{ABB2FE18-0DE6-40F8-8C2A-5854D189DD13}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ABB2FE18-0DE6-40F8-8C2A-5854D189DD13}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ABB2FE18-0DE6-40F8-8C2A-5854D189DD13}.Release|Any CPU.Build.0 = Release|Any CPU
+		{742AF2B9-58B8-40D2-9262-2462548925F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{742AF2B9-58B8-40D2-9262-2462548925F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{742AF2B9-58B8-40D2-9262-2462548925F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{742AF2B9-58B8-40D2-9262-2462548925F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{43206434-F5E6-4E74-A1E8-FE69EEBC0093}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{43206434-F5E6-4E74-A1E8-FE69EEBC0093}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{43206434-F5E6-4E74-A1E8-FE69EEBC0093}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{43206434-F5E6-4E74-A1E8-FE69EEBC0093}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4611FF49-11E4-4684-BC50-77035281208E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4611FF49-11E4-4684-BC50-77035281208E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4611FF49-11E4-4684-BC50-77035281208E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4611FF49-11E4-4684-BC50-77035281208E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4BD57D55-87D5-4D73-8015-DB940095B9AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4BD57D55-87D5-4D73-8015-DB940095B9AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4BD57D55-87D5-4D73-8015-DB940095B9AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4BD57D55-87D5-4D73-8015-DB940095B9AD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
