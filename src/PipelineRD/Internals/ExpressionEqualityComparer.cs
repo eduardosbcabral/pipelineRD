@@ -63,7 +63,6 @@ public sealed class ExpressionEqualityComparer : IEqualityComparer<Expression?>
                 case ConstantExpression constantExpression:
                     switch (constantExpression.Value)
                     {
-                        case IQueryable:
                         case null:
                             break;
 
@@ -83,13 +82,14 @@ public sealed class ExpressionEqualityComparer : IEqualityComparer<Expression?>
                     break;
 
                 case GotoExpression gotoExpression:
-                    hash.Add(gotoExpression.Value, this);
+                    AddExpressionToHashIfNotNull(gotoExpression.Value);
                     hash.Add(gotoExpression.Kind);
-                    hash.Add(gotoExpression.Target);
+                    AddToHashIfNotNull(gotoExpression.Target?.Name);
+                    AddToHashIfNotNull(gotoExpression.Target?.Type);
                     break;
 
                 case IndexExpression indexExpression:
-                    hash.Add(indexExpression.Object, this);
+                    AddExpressionToHashIfNotNull(indexExpression.Object);
                     AddListToHash(indexExpression.Arguments);
                     hash.Add(indexExpression.Indexer);
                     break;
@@ -101,7 +101,8 @@ public sealed class ExpressionEqualityComparer : IEqualityComparer<Expression?>
 
                 case LabelExpression labelExpression:
                     AddExpressionToHashIfNotNull(labelExpression.DefaultValue);
-                    hash.Add(labelExpression.Target);
+                    AddToHashIfNotNull(labelExpression.Target?.Name);
+                    AddToHashIfNotNull(labelExpression.Target?.Type);
                     break;
 
                 case LambdaExpression lambdaExpression:
@@ -117,7 +118,8 @@ public sealed class ExpressionEqualityComparer : IEqualityComparer<Expression?>
 
                 case LoopExpression loopExpression:
                     hash.Add(loopExpression.Body, this);
-                    AddToHashIfNotNull(loopExpression.BreakLabel);
+                    AddToHashIfNotNull(loopExpression.BreakLabel?.Name);
+                    AddToHashIfNotNull(loopExpression.BreakLabel?.Type);
                     AddToHashIfNotNull(loopExpression.ContinueLabel);
                     break;
 
@@ -369,7 +371,8 @@ public sealed class ExpressionEqualityComparer : IEqualityComparer<Expression?>
 
         private bool CompareGoto(GotoExpression a, GotoExpression b)
             => a.Kind == b.Kind
-                && Equals(a.Target, b.Target)
+                && Equals(a.Target?.Name, b.Target?.Name)
+                && Equals(a.Target?.Type, b.Target?.Type)
                 && Compare(a.Value, b.Value);
 
         private bool CompareIndex(IndexExpression a, IndexExpression b)
@@ -382,8 +385,10 @@ public sealed class ExpressionEqualityComparer : IEqualityComparer<Expression?>
                 && CompareExpressionList(a.Arguments, b.Arguments);
 
         private bool CompareLabel(LabelExpression a, LabelExpression b)
-            => Equals(a.Target, b.Target)
+            => Equals(a.Target?.Name, b.Target?.Name)
+                && Equals(a.Target?.Type, b.Target?.Type)
                 && Compare(a.DefaultValue, b.DefaultValue);
+
 
         private bool CompareLambda(LambdaExpression a, LambdaExpression b)
         {
@@ -434,7 +439,8 @@ public sealed class ExpressionEqualityComparer : IEqualityComparer<Expression?>
                 && CompareElementInitList(a.Initializers, b.Initializers);
 
         private bool CompareLoop(LoopExpression a, LoopExpression b)
-            => Equals(a.BreakLabel, b.BreakLabel)
+            => Equals(a.BreakLabel?.Name, b.BreakLabel?.Name)
+                && Equals(a.BreakLabel?.Type, b.BreakLabel?.Type)
                 && Equals(a.ContinueLabel, b.ContinueLabel)
                 && Compare(a.Body, b.Body);
 

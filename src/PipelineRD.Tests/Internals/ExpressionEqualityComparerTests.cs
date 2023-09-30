@@ -1,13 +1,38 @@
 using PipelineRD.Internals;
+using PipelineRD.Test.Internals;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 using Xunit;
 
-namespace PipelineRD.Test.Internals
+namespace PipelineR.Test.Internals
 {
-    public class ExpressionEqualityComparerTests
+    public class ExpressionEqualityComparerTest
     {
+        [Fact]
+        public void Same_expression_should_be_returns_same_hashcode()
+        {
+            var expressionComparer = ExpressionEqualityComparer.Instance;
+
+            var lambdaExpression1 = ExpressionFactory.ComplexExpression();
+            var lambdaExpression2 = ExpressionFactory.ComplexExpression();
+
+            Assert.Equal(expressionComparer.GetHashCode(lambdaExpression1), expressionComparer.GetHashCode(lambdaExpression2));
+            Assert.True(expressionComparer.Equals(lambdaExpression1, lambdaExpression2));
+        }
+
+        [Fact]
+        public void Different_expression_should_be_returns_different_hashcode()
+        {
+            var expressionComparer = ExpressionEqualityComparer.Instance;
+
+            var lambdaExpression1 = ExpressionFactory.SimpleExpression("Failure 1");
+            var lambdaExpression2 = ExpressionFactory.SimpleExpression("Failure 2");
+
+            Assert.NotEqual(expressionComparer.GetHashCode(lambdaExpression1), expressionComparer.GetHashCode(lambdaExpression2));
+            Assert.False(expressionComparer.Equals(lambdaExpression1, lambdaExpression2));
+        }
+
         [Fact]
         public void Member_init_expressions_are_compared_correctly()
         {
